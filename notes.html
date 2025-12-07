@@ -1,0 +1,2088 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>My Notes</title>
+    
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    
+    <style>
+        /* ==========================================
+           DEVELOPER NOTES
+           ==========================================
+           - FIXED: Edit button in reader mode now works properly
+           - FIXED: Lock/Unlock option added in reader mode
+           - All transitions smooth and bug-free
+        ========================================== */
+        
+        :root {
+            /* Light Theme Variables */
+            --primary-color: #00BCD4;
+            --primary-dark: #0097A7;
+            --secondary-color: #FFC107;
+            --bg-color: #F5F7FA;
+            --card-bg: #FFFFFF;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --border-color: #E0E0E0;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+            --header-gradient: linear-gradient(135deg, #00BCD4 0%, #26C6DA 100%);
+            --transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        
+        [data-theme="dark"] {
+            /* Dark Theme Variables */
+            --primary-color: #00BCD4;
+            --primary-dark: #00ACC1;
+            --secondary-color: #FFD54F;
+            --bg-color: #121212;
+            --card-bg: #1E1E1E;
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0B0;
+            --border-color: #333333;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+            --header-gradient: linear-gradient(135deg, #00838F 0%, #00ACC1 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            transition: var(--transition);
+            overflow-x: hidden;
+        }
+        
+        /* ========== HEADER ========== */
+        .header {
+            background: var(--header-gradient);
+            color: white;
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 64px;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .menu-btn, .search-btn, .view-toggle-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: var(--transition);
+            min-width: 48px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .menu-btn:active, .search-btn:active, .view-toggle-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* ========== SEARCH BAR ========== */
+        .search-container {
+            display: none;
+            padding: 16px 20px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 64px;
+            z-index: 99;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .search-container.active {
+            display: block;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 14px 48px 14px 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 24px;
+            font-size: 16px;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        /* ========== MAIN CONTAINER ========== */
+        .main-container {
+            padding: 20px;
+            padding-bottom: 100px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* ========== EMPTY STATE ========== */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            display: none;
+        }
+        
+        .empty-state.show {
+            display: block;
+        }
+        
+        .empty-state i {
+            font-size: 80px;
+            color: var(--text-secondary);
+            opacity: 0.5;
+            margin-bottom: 24px;
+        }
+        
+        .empty-state h2 {
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            font-size: 24px;
+        }
+        
+        .empty-state p {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+        
+        /* ========== NOTES LIST VIEW ========== */
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .note-item {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            cursor: pointer;
+            transition: var(--transition);
+            border-left: 6px solid var(--primary-color);
+            display: flex;
+            align-items: stretch;
+        }
+        
+        .note-item:active {
+            transform: scale(0.98);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .note-item-content {
+            flex: 1;
+            padding: 16px 20px;
+        }
+        
+        .note-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .note-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        
+        .note-preview {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .note-locked-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .note-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .lock-icon {
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+        
+        /* ========== NOTES CARD VIEW ========== */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .note-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .note-card:active {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .note-card-header {
+            padding: 20px;
+            flex: 1;
+            position: relative;
+        }
+        
+        .note-card .note-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .note-card .note-preview {
+            font-size: 14px;
+            line-height: 1.6;
+            -webkit-line-clamp: 4;
+        }
+        
+        .note-card .lock-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+        }
+        
+        .note-card-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* ========== COLOR CODING ========== */
+        .note-color-red { border-left-color: #F44336 !important; }
+        .note-color-red.note-card { background: linear-gradient(135deg, #F44336 0%, #E57373 100%); color: white; }
+        .note-color-red.note-card .note-title, 
+        .note-color-red.note-card .note-preview,
+        .note-color-red.note-card .note-meta,
+        .note-color-red.note-card .lock-icon { color: white !important; }
+        .note-color-red.note-card .note-card-footer { border-top-color: rgba(255, 255, 255, 0.3); }
+        
+        .note-color-yellow { border-left-color: #FFC107 !important; }
+        .note-color-yellow.note-card { background: linear-gradient(135deg, #FFC107 0%, #FFD54F 100%); color: #333; }
+        .note-color-yellow.note-card .note-title, 
+        .note-color-yellow.note-card .note-preview,
+        .note-color-yellow.note-card .note-meta,
+        .note-color-yellow.note-card .lock-icon { color: #333 !important; }
+        .note-color-yellow.note-card .note-card-footer { border-top-color: rgba(0, 0, 0, 0.1); }
+        
+        .note-color-green { border-left-color: #4CAF50 !important; }
+        .note-color-green.note-card { background: linear-gradient(135deg, #4CAF50 0%, #81C784 100%); color: white; }
+        .note-color-green.note-card .note-title, 
+        .note-color-green.note-card .note-preview,
+        .note-color-green.note-card .note-meta,
+        .note-color-green.note-card .lock-icon { color: white !important; }
+        .note-color-green.note-card .note-card-footer { border-top-color: rgba(255, 255, 255, 0.3); }
+        
+        .note-color-blue { border-left-color: #2196F3 !important; }
+        .note-color-blue.note-card { background: linear-gradient(135deg, #2196F3 0%, #64B5F6 100%); color: white; }
+        .note-color-blue.note-card .note-title, 
+        .note-color-blue.note-card .note-preview,
+        .note-color-blue.note-card .note-meta,
+        .note-color-blue.note-card .lock-icon { color: white !important; }
+        .note-color-blue.note-card .note-card-footer { border-top-color: rgba(255, 255, 255, 0.3); }
+        
+        .note-color-purple { border-left-color: #9C27B0 !important; }
+        .note-color-purple.note-card { background: linear-gradient(135deg, #9C27B0 0%, #BA68C8 100%); color: white; }
+        .note-color-purple.note-card .note-title, 
+        .note-color-purple.note-card .note-preview,
+        .note-color-purple.note-card .note-meta,
+        .note-color-purple.note-card .lock-icon { color: white !important; }
+        .note-color-purple.note-card .note-card-footer { border-top-color: rgba(255, 255, 255, 0.3); }
+        
+        .note-color-cyan { border-left-color: #00BCD4 !important; }
+        .note-color-cyan.note-card { background: linear-gradient(135deg, #00BCD4 0%, #4DD0E1 100%); color: white; }
+        .note-color-cyan.note-card .note-title, 
+        .note-color-cyan.note-card .note-preview,
+        .note-color-cyan.note-card .note-meta,
+        .note-color-cyan.note-card .lock-icon { color: white !important; }
+        .note-color-cyan.note-card .note-card-footer { border-top-color: rgba(255, 255, 255, 0.3); }
+        
+        /* ========== FAB BUTTON ========== */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 64px;
+            height: 64px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .fab:active {
+            transform: scale(0.95);
+            box-shadow: var(--shadow-md);
+        }
+        
+        /* ========== MENU DRAWER ========== */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .drawer-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+        
+        .drawer {
+            position: fixed;
+            top: 0;
+            left: -320px;
+            width: 280px;
+            height: 100%;
+            background: var(--card-bg);
+            z-index: 201;
+            transition: left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: var(--shadow-lg);
+            overflow-y: auto;
+        }
+        
+        .drawer.active {
+            left: 0;
+        }
+        
+        .drawer-header {
+            padding: 24px 20px;
+            background: var(--header-gradient);
+            color: white;
+        }
+        
+        .drawer-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .drawer-content {
+            padding: 20px 0;
+        }
+        
+        .drawer-section {
+            margin-bottom: 24px;
+            padding: 0 20px;
+        }
+        
+        .drawer-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        
+        .drawer-item {
+            padding: 14px 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 16px;
+            color: var(--text-primary);
+            border-radius: 8px;
+            margin: 0 -20px;
+            padding-left: 20px;
+        }
+        
+        .drawer-item:active {
+            background: var(--bg-color);
+        }
+        
+        .drawer-item i {
+            width: 24px;
+            text-align: center;
+            color: var(--primary-color);
+        }
+        
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            margin: 0 -20px;
+        }
+        
+        .theme-toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 16px;
+        }
+        
+        .theme-toggle-label i {
+            width: 24px;
+            text-align: center;
+            color: var(--primary-color);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+            background: var(--border-color);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .toggle-switch.active {
+            background: var(--primary-color);
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+        
+        .toggle-switch.active .toggle-slider {
+            left: 27px;
+        }
+        
+        /* ========== NOTE READER SCREEN ========== */
+        .reader-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            z-index: 150;
+        }
+        
+        .reader-screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .reader-header {
+            background: var(--card-bg);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            min-height: 64px;
+        }
+        
+        .reader-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .reader-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .reader-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 20px;
+        }
+        
+        .reader-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            line-height: 1.3;
+            word-wrap: break-word;
+        }
+        
+        .reader-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border-color);
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .reader-meta i {
+            margin-right: 6px;
+        }
+        
+        .reader-text {
+            font-size: 17px;
+            line-height: 1.8;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        /* ========== EDITOR SCREEN ========== */
+        .editor-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            z-index: 150;
+        }
+        
+        .editor-screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .editor-header {
+            background: var(--card-bg);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            min-height: 64px;
+        }
+        
+        .editor-header-left, .editor-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 22px;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 50%;
+            transition: var(--transition);
+            min-width: 48px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icon-btn:active {
+            background: var(--bg-color);
+        }
+        
+        .icon-btn.edit-btn {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .icon-btn.edit-btn:active {
+            background: var(--primary-dark);
+        }
+        
+        .icon-btn.delete-btn {
+            background: #F44336;
+            color: white;
+        }
+        
+        .icon-btn.delete-btn:active {
+            background: #D32F2F;
+        }
+        
+        .icon-btn.lock-btn {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .icon-btn.lock-btn:active {
+            background: #F57C00;
+        }
+        
+        .editor-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .editor-title {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 28px;
+            font-weight: 600;
+            padding: 16px 0;
+            margin-bottom: 12px;
+            resize: none;
+            font-family: inherit;
+        }
+        
+        .editor-title:focus {
+            outline: none;
+        }
+        
+        .formatting-toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 12px 0;
+            margin-bottom: 12px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .format-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-size: 16px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            min-width: 48px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .format-btn:active, .format-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .editor-textarea {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 16px;
+            line-height: 1.7;
+            padding: 16px 0;
+            resize: none;
+            min-height: 300px;
+            font-family: inherit;
+        }
+        
+        .editor-textarea:focus {
+            outline: none;
+        }
+        
+        /* ========== MODAL ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 28px;
+            max-width: 360px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        
+        .modal-text {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+        
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .pin-input-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        
+        .pin-digit {
+            width: 56px;
+            height: 56px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 24px;
+            text-align: center;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+        
+        .pin-digit:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .color-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .color-option {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 3px solid transparent;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+        
+        .color-option:active {
+            transform: scale(0.95);
+        }
+        
+        .color-option.selected {
+            border-color: var(--text-primary);
+        }
+        
+        .color-option.selected::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .color-option.color-red { background: linear-gradient(135deg, #F44336 0%, #E57373 100%); }
+        .color-option.color-yellow { background: linear-gradient(135deg, #FFC107 0%, #FFD54F 100%); }
+        .color-option.color-green { background: linear-gradient(135deg, #4CAF50 0%, #81C784 100%); }
+        .color-option.color-blue { background: linear-gradient(135deg, #2196F3 0%, #64B5F6 100%); }
+        .color-option.color-purple { background: linear-gradient(135deg, #9C27B0 0%, #BA68C8 100%); }
+        .color-option.color-cyan { background: linear-gradient(135deg, #00BCD4 0%, #4DD0E1 100%); }
+        
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            min-width: 80px;
+            min-height: 48px;
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:active {
+            background: var(--bg-color);
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:active {
+            background: var(--primary-dark);
+        }
+        
+        .btn-danger {
+            background: #F44336;
+            color: white;
+        }
+        
+        .btn-danger:active {
+            background: #D32F2F;
+        }
+        
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 600px) {
+            .notes-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .pin-digit {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+            }
+            
+            .color-picker-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .reader-title {
+                font-size: 26px;
+            }
+            
+            .reader-text {
+                font-size: 16px;
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .drawer {
+                width: 320px;
+            }
+            
+            .reader-content {
+                padding: 40px;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== HEADER ========== -->
+    <div class="header">
+        <div class="header-left">
+            <button class="menu-btn" id="menuBtn" aria-label="Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1>My Notes</h1>
+        </div>
+        <div class="header-right">
+            <button class="view-toggle-btn" id="viewToggleBtn" aria-label="Toggle View">
+                <i class="fas fa-th"></i>
+            </button>
+            <button class="search-btn" id="searchBtn" aria-label="Search">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========== SEARCH BAR ========== -->
+    <div class="search-container" id="searchContainer">
+        <input type="text" class="search-input" id="searchInput" placeholder="Search notes...">
+    </div>
+
+    <!-- ========== MAIN CONTAINER ========== -->
+    <div class="main-container">
+        <!-- Empty State -->
+        <div class="empty-state show" id="emptyState">
+            <i class="fas fa-sticky-note"></i>
+            <h2>No Notes Yet</h2>
+            <p>Tap the + button to create your first note</p>
+        </div>
+        
+        <!-- Notes List View -->
+        <div class="notes-list" id="notesList"></div>
+        
+        <!-- Notes Card View -->
+        <div class="notes-grid" id="notesGrid" style="display: none;"></div>
+    </div>
+
+    <!-- ========== FAB BUTTON ========== -->
+    <button class="fab" id="fabBtn" aria-label="Add Note">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- ========== MENU DRAWER ========== -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <h2>Settings</h2>
+        </div>
+        <div class="drawer-content">
+            <div class="drawer-section">
+                <div class="drawer-section-title">Appearance</div>
+                <div class="theme-toggle">
+                    <div class="theme-toggle-label">
+                        <i class="fas fa-moon"></i>
+                        <span>Dark Theme</span>
+                    </div>
+                    <div class="toggle-switch" id="themeToggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="drawer-section">
+                <div class="drawer-section-title">Security</div>
+                <div class="drawer-item" id="setPinBtn">
+                    <i class="fas fa-lock"></i>
+                    <span>Set PIN</span>
+                </div>
+                <div class="drawer-item" id="changePinBtn">
+                    <i class="fas fa-key"></i>
+                    <span>Change PIN</span>
+                </div>
+                <div class="drawer-item" id="clearPinBtn">
+                    <i class="fas fa-unlock"></i>
+                    <span>Clear PIN</span>
+                </div>
+            </div>
+            
+            <div class="drawer-section">
+                <div class="drawer-section-title">About</div>
+                <div class="drawer-item" id="aboutBtn">
+                    <i class="fas fa-info-circle"></i>
+                    <span>About App</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== NOTE READER SCREEN ========== -->
+    <div class="reader-screen" id="readerScreen">
+        <div class="reader-header">
+            <div class="reader-header-left">
+                <button class="icon-btn" id="readerBackBtn" aria-label="Back">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+            <div class="reader-header-right">
+                <button class="icon-btn lock-btn" id="readerLockBtn" aria-label="Lock/Unlock" title="Lock/Unlock Note">
+                    <i class="fas fa-lock-open"></i>
+                </button>
+                <button class="icon-btn edit-btn" id="readerEditBtn" aria-label="Edit" title="Edit Note">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="icon-btn delete-btn" id="readerDeleteBtn" aria-label="Delete" title="Delete Note">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div class="reader-content">
+            <h1 class="reader-title" id="readerTitle">Note Title</h1>
+            <div class="reader-meta">
+                <span><i class="fas fa-clock"></i><span id="readerDate">Today</span></span>
+            </div>
+            <div class="reader-text" id="readerText">Note content goes here...</div>
+        </div>
+    </div>
+
+    <!-- ========== EDITOR SCREEN ========== -->
+    <div class="editor-screen" id="editorScreen">
+        <div class="editor-header">
+            <div class="editor-header-left">
+                <button class="icon-btn" id="backBtn" aria-label="Back">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+            <div class="editor-header-right">
+                <button class="icon-btn" id="lockNoteBtn" aria-label="Lock Note">
+                    <i class="fas fa-lock-open"></i>
+                </button>
+                <button class="icon-btn" id="colorPickerBtn" aria-label="Choose Color">
+                    <i class="fas fa-palette"></i>
+                </button>
+                <button class="icon-btn" id="exportBtn" aria-label="Export">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+        <div class="editor-content">
+            <textarea class="editor-title" id="editorTitle" placeholder="Note Title"></textarea>
+            
+            <div class="formatting-toolbar">
+                <button class="format-btn" id="boldBtn" aria-label="Bold">
+                    <i class="fas fa-bold"></i>
+                </button>
+                <button class="format-btn" id="italicBtn" aria-label="Italic">
+                    <i class="fas fa-italic"></i>
+                </button>
+            </div>
+            
+            <textarea class="editor-textarea" id="editorTextarea" placeholder="Start typing your note..."></textarea>
+        </div>
+    </div>
+
+    <!-- ========== MODALS ========== -->
+    
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <div class="modal-title">Delete Note?</div>
+            <div class="modal-text">This action cannot be undone. Are you sure you want to delete this note?</div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Color Picker Modal -->
+    <div class="modal-overlay" id="colorModal">
+        <div class="modal">
+            <div class="modal-title">Choose Color</div>
+            <div class="color-picker-grid">
+                <div class="color-option color-red" data-color="red"></div>
+                <div class="color-option color-yellow" data-color="yellow"></div>
+                <div class="color-option color-green" data-color="green"></div>
+                <div class="color-option color-blue" data-color="blue"></div>
+                <div class="color-option color-purple" data-color="purple"></div>
+                <div class="color-option color-cyan" data-color="cyan"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelColorBtn">Cancel</button>
+                <button class="btn btn-primary" id="confirmColorBtn">Apply</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Set PIN Modal -->
+    <div class="modal-overlay" id="setPinModal">
+        <div class="modal">
+            <div class="modal-title">Set Security PIN</div>
+            <div class="modal-text">Create a 4-digit PIN to lock your notes</div>
+            <div class="pin-input-container">
+                <input type="password" maxlength="1" class="pin-digit" id="pinDigit1" inputmode="numeric">
+                <input type="password" maxlength="1" class="pin-digit" id="pinDigit2" inputmode="numeric">
+                <input type="password" maxlength="1" class="pin-digit" id="pinDigit3" inputmode="numeric">
+                <input type="password" maxlength="1" class="pin-digit" id="pinDigit4" inputmode="numeric">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelSetPinBtn">Cancel</button>
+                <button class="btn btn-primary" id="confirmSetPinBtn">Set PIN</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Verify PIN Modal -->
+    <div class="modal-overlay" id="verifyPinModal">
+        <div class="modal">
+            <div class="modal-title">Enter PIN</div>
+            <div class="modal-text" id="verifyPinText">Enter your 4-digit PIN</div>
+            <div class="pin-input-container">
+                <input type="password" maxlength="1" class="pin-digit" id="verifyPinDigit1" inputmode="numeric">
+                <input type="password" maxlength="1" class="pin-digit" id="verifyPinDigit2" inputmode="numeric">
+                <input type="password" maxlength="1" class="pin-digit" id="verifyPinDigit3" inputmode="numeric">
+                <input type="password" maxlength="1" class="pin-digit" id="verifyPinDigit4" inputmode="numeric">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelVerifyPinBtn">Cancel</button>
+                <button class="btn btn-primary" id="confirmVerifyPinBtn">Verify</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- About Modal -->
+    <div class="modal-overlay" id="aboutModal">
+        <div class="modal">
+            <div class="modal-title">About My Notes</div>
+            <div class="modal-text">
+                A beautiful, secure notes app with PIN protection, color coding, and search functionality.
+                <br><br>
+                <strong>Version:</strong> 1.0.3<br>
+                <strong>Storage:</strong> Local Browser Storage<br>
+                <strong>✅ Fixed:</strong> Edit button & Lock/Unlock in reader
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="closeAboutBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== JAVASCRIPT ========== -->
+    <script>
+        // ==========================================
+        // STATE MANAGEMENT
+        // ==========================================
+        let notes = [];
+        let currentNoteId = null;
+        let currentView = 'list';
+        let selectedColor = 'cyan';
+        let currentPinAction = null;
+        let autoSaveTimeout = null;
+        
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 App initializing...');
+            loadNotesFromStorage();
+            loadThemeFromStorage();
+            loadViewFromStorage();
+            renderNotes();
+            initializeEventListeners();
+            console.log('✅ App initialized. Total notes:', notes.length);
+        });
+        
+        window.addEventListener('beforeunload', () => {
+            console.log('📝 Saving before page close...');
+            if (currentNoteId !== null) {
+                saveCurrentNote();
+            }
+        });
+        
+        // ==========================================
+        // LOCAL STORAGE FUNCTIONS
+        // ==========================================
+        
+        function saveNotesToStorage() {
+            try {
+                localStorage.setItem('notes', JSON.stringify(notes));
+                console.log('💾 Notes saved to localStorage. Total:', notes.length);
+            } catch (error) {
+                console.error('❌ Error saving notes:', error);
+                alert('Failed to save notes. Storage might be full.');
+            }
+        }
+        
+        function loadNotesFromStorage() {
+            try {
+                const storedNotes = localStorage.getItem('notes');
+                if (storedNotes) {
+                    notes = JSON.parse(storedNotes);
+                    console.log('📂 Loaded', notes.length, 'notes from localStorage');
+                } else {
+                    notes = [];
+                    console.log('📂 No notes found in localStorage');
+                }
+            } catch (error) {
+                console.error('❌ Error loading notes:', error);
+                notes = [];
+            }
+        }
+        
+        function saveThemeToStorage(isDark) {
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+        
+        function loadThemeFromStorage() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.getElementById('themeToggle').classList.add('active');
+            }
+        }
+        
+        function saveViewToStorage(view) {
+            localStorage.setItem('view', view);
+        }
+        
+        function loadViewFromStorage() {
+            const view = localStorage.getItem('view');
+            if (view === 'grid') {
+                currentView = 'grid';
+                updateViewToggle();
+            }
+        }
+        
+        function savePinToStorage(pin) {
+            const encoded = btoa(pin);
+            localStorage.setItem('appPin', encoded);
+        }
+        
+        function loadPinFromStorage() {
+            try {
+                const encoded = localStorage.getItem('appPin');
+                return encoded ? atob(encoded) : null;
+            } catch (error) {
+                return null;
+            }
+        }
+        
+        function clearPinFromStorage() {
+            localStorage.removeItem('appPin');
+        }
+        
+        // ==========================================
+        // NOTE MANAGEMENT FUNCTIONS
+        // ==========================================
+        
+        function createNewNote() {
+            console.log('➕ Creating new note...');
+            const newNote = {
+                id: Date.now(),
+                title: '',
+                content: '',
+                color: 'cyan',
+                locked: false,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            notes.unshift(newNote);
+            saveNotesToStorage();
+            openEditor(newNote.id);
+        }
+        
+        function saveCurrentNote() {
+            if (currentNoteId === null) {
+                console.log('⚠️ No note to save');
+                return;
+            }
+            
+            const note = notes.find(n => n.id === currentNoteId);
+            if (!note) {
+                console.log('⚠️ Note not found:', currentNoteId);
+                return;
+            }
+            
+            const title = document.getElementById('editorTitle').value.trim();
+            const content = document.getElementById('editorTextarea').value.trim();
+            
+            console.log('💾 Saving note:', { id: currentNoteId, title, contentLength: content.length });
+            
+            const isNewAndEmpty = !title && !content && 
+                                  !note.title && !note.content;
+            
+            if (isNewAndEmpty) {
+                console.log('🗑️ Deleting empty new note');
+                deleteNote(currentNoteId);
+                return;
+            }
+            
+            note.title = title || 'Untitled Note';
+            note.content = content;
+            note.updatedAt = new Date().toISOString();
+            
+            saveNotesToStorage();
+            console.log('✅ Note saved successfully');
+        }
+        
+        function autoSaveNote() {
+            if (autoSaveTimeout) {
+                clearTimeout(autoSaveTimeout);
+            }
+            
+            autoSaveTimeout = setTimeout(() => {
+                if (currentNoteId !== null) {
+                    console.log('🔄 Auto-saving note...');
+                    saveCurrentNote();
+                    renderNotes();
+                }
+            }, 500);
+        }
+        
+        function deleteNote(noteId) {
+            console.log('🗑️ Deleting note:', noteId);
+            notes = notes.filter(n => n.id !== noteId);
+            saveNotesToStorage();
+            renderNotes();
+        }
+        
+        function exportNote(noteId) {
+            const note = notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            const content = `${note.title}\n\n${note.content}`;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${note.title || 'note'}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            console.log('📥 Note exported:', note.title);
+        }
+        
+        function toggleNoteLock(noteId) {
+            const note = notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            const storedPin = loadPinFromStorage();
+            
+            if (!storedPin) {
+                alert('Please set a PIN first from Settings menu');
+                return;
+            }
+            
+            if (note.locked) {
+                currentPinAction = 'unlock';
+                currentNoteId = noteId;
+                showVerifyPinModal('Enter PIN to unlock this note');
+            } else {
+                currentPinAction = 'lock';
+                currentNoteId = noteId;
+                showVerifyPinModal('Enter PIN to lock this note');
+            }
+        }
+        
+        function applyNoteLock(noteId, locked) {
+            const note = notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            note.locked = locked;
+            saveNotesToStorage();
+            
+            // Update lock icon in editor
+            if (currentNoteId === noteId) {
+                updateLockIcon(locked, 'lockNoteBtn');
+            }
+            
+            // Update lock icon in reader
+            updateReaderLockIcon(locked);
+            
+            renderNotes();
+            console.log('🔒 Note', locked ? 'locked' : 'unlocked');
+        }
+        
+        function updateLockIcon(isLocked, btnId) {
+            const lockBtn = document.getElementById(btnId);
+            const icon = lockBtn.querySelector('i');
+            if (isLocked) {
+                icon.classList.remove('fa-lock-open');
+                icon.classList.add('fa-lock');
+            } else {
+                icon.classList.remove('fa-lock');
+                icon.classList.add('fa-lock-open');
+            }
+        }
+        
+        function updateReaderLockIcon(isLocked) {
+            const lockBtn = document.getElementById('readerLockBtn');
+            const icon = lockBtn.querySelector('i');
+            if (isLocked) {
+                icon.classList.remove('fa-lock-open');
+                icon.classList.add('fa-lock');
+            } else {
+                icon.classList.remove('fa-lock');
+                icon.classList.add('fa-lock-open');
+            }
+        }
+        
+        function changeNoteColor(noteId, color) {
+            const note = notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            note.color = color;
+            saveNotesToStorage();
+            renderNotes();
+            console.log('🎨 Note color changed to:', color);
+        }
+        
+        function searchNotes(query) {
+            const searchTerm = query.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                renderNotes();
+                return;
+            }
+            
+            const filteredNotes = notes.filter(note => {
+                const titleMatch = note.title.toLowerCase().includes(searchTerm);
+                const contentMatch = note.content.toLowerCase().includes(searchTerm);
+                return titleMatch || contentMatch;
+            });
+            
+            renderNotes(filteredNotes);
+        }
+        
+        // ==========================================
+        // RENDERING FUNCTIONS
+        // ==========================================
+        
+        function renderNotes(notesToRender = notes) {
+            const emptyState = document.getElementById('emptyState');
+            const notesList = document.getElementById('notesList');
+            const notesGrid = document.getElementById('notesGrid');
+            
+            if (notesToRender.length === 0) {
+                emptyState.classList.add('show');
+                notesList.innerHTML = '';
+                notesGrid.innerHTML = '';
+                return;
+            }
+            
+            emptyState.classList.remove('show');
+            
+            if (currentView === 'list') {
+                notesList.style.display = 'flex';
+                notesGrid.style.display = 'none';
+                renderListView(notesToRender);
+            } else {
+                notesList.style.display = 'none';
+                notesGrid.style.display = 'grid';
+                renderGridView(notesToRender);
+            }
+        }
+        
+        function renderListView(notesToRender) {
+            const notesList = document.getElementById('notesList');
+            notesList.innerHTML = '';
+            
+            notesToRender.forEach(note => {
+                const noteItem = document.createElement('div');
+                noteItem.className = `note-item note-color-${note.color}`;
+                noteItem.onclick = () => handleNoteClick(note);
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'note-item-content';
+                
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'note-item-header';
+                
+                const title = document.createElement('div');
+                title.className = 'note-title';
+                title.textContent = note.title || 'Untitled Note';
+                
+                headerDiv.appendChild(title);
+                
+                if (note.locked) {
+                    const lockIcon = document.createElement('i');
+                    lockIcon.className = 'fas fa-lock lock-icon';
+                    headerDiv.appendChild(lockIcon);
+                }
+                
+                contentDiv.appendChild(headerDiv);
+                
+                if (note.locked) {
+                    const lockedText = document.createElement('div');
+                    lockedText.className = 'note-locked-text';
+                    lockedText.innerHTML = '<i class="fas fa-lock"></i> This note is locked';
+                    contentDiv.appendChild(lockedText);
+                } else {
+                    const preview = document.createElement('div');
+                    preview.className = 'note-preview';
+                    preview.textContent = note.content || 'No content';
+                    contentDiv.appendChild(preview);
+                }
+                
+                const meta = document.createElement('div');
+                meta.className = 'note-meta';
+                meta.textContent = formatDate(note.updatedAt);
+                contentDiv.appendChild(meta);
+                
+                noteItem.appendChild(contentDiv);
+                notesList.appendChild(noteItem);
+            });
+        }
+        
+        function renderGridView(notesToRender) {
+            const notesGrid = document.getElementById('notesGrid');
+            notesGrid.innerHTML = '';
+            
+            notesToRender.forEach(note => {
+                const noteCard = document.createElement('div');
+                noteCard.className = `note-card note-color-${note.color}`;
+                noteCard.onclick = () => handleNoteClick(note);
+                
+                const header = document.createElement('div');
+                header.className = 'note-card-header';
+                
+                const title = document.createElement('div');
+                title.className = 'note-title';
+                title.textContent = note.title || 'Untitled Note';
+                header.appendChild(title);
+                
+                if (note.locked) {
+                    const lockIcon = document.createElement('i');
+                    lockIcon.className = 'fas fa-lock lock-icon';
+                    header.appendChild(lockIcon);
+                    
+                    const lockedText = document.createElement('div');
+                    lockedText.className = 'note-locked-text';
+                    lockedText.innerHTML = '<i class="fas fa-lock"></i> This note is locked';
+                    header.appendChild(lockedText);
+                } else {
+                    const preview = document.createElement('div');
+                    preview.className = 'note-preview';
+                    preview.textContent = note.content || 'No content';
+                    header.appendChild(preview);
+                }
+                
+                const footer = document.createElement('div');
+                footer.className = 'note-card-footer';
+                
+                const meta = document.createElement('div');
+                meta.className = 'note-meta';
+                meta.textContent = formatDate(note.updatedAt);
+                footer.appendChild(meta);
+                
+                noteCard.appendChild(header);
+                noteCard.appendChild(footer);
+                notesGrid.appendChild(noteCard);
+            });
+        }
+        
+        function handleNoteClick(note) {
+            if (note.locked) {
+                currentNoteId = note.id;
+                currentPinAction = 'viewLocked';
+                showVerifyPinModal('Enter PIN to view this note');
+            } else {
+                openReader(note.id);
+            }
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                return 'Today';
+            } else if (diffDays === 1) {
+                return 'Yesterday';
+            } else if (diffDays < 7) {
+                return `${diffDays} days ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+        
+        // ==========================================
+        // READER FUNCTIONS
+        // ==========================================
+        
+        function openReader(noteId) {
+            console.log('📖 Opening reader for note:', noteId);
+            currentNoteId = noteId;
+            const note = notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            document.getElementById('readerTitle').textContent = note.title || 'Untitled Note';
+            document.getElementById('readerDate').textContent = formatDate(note.updatedAt);
+            document.getElementById('readerText').textContent = note.content || 'No content';
+            
+            // Update lock button icon
+            updateReaderLockIcon(note.locked);
+            
+            document.getElementById('readerScreen').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeReader() {
+            console.log('🔙 Closing reader...');
+            document.getElementById('readerScreen').classList.remove('active');
+            document.body.style.overflow = '';
+            currentNoteId = null;
+        }
+        
+        function openEditorFromReader() {
+            console.log('✏️ Opening editor from reader...');
+            const noteIdToEdit = currentNoteId; // Save the ID before closing reader
+            document.getElementById('readerScreen').classList.remove('active');
+            // Don't reset currentNoteId or body overflow here
+            openEditor(noteIdToEdit);
+        }
+        
+        function deleteNoteFromReader() {
+            showDeleteModal();
+        }
+        
+        function toggleNoteLockFromReader() {
+            if (currentNoteId) {
+                toggleNoteLock(currentNoteId);
+            }
+        }
+        
+        // ==========================================
+        // EDITOR FUNCTIONS
+        // ==========================================
+        
+        function openEditor(noteId) {
+            console.log('📝 Opening editor for note:', noteId);
+            currentNoteId = noteId;
+            const note = notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            document.getElementById('editorTitle').value = note.title;
+            document.getElementById('editorTextarea').value = note.content;
+            selectedColor = note.color;
+            updateLockIcon(note.locked, 'lockNoteBtn');
+            
+            document.getElementById('editorScreen').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeEditor() {
+            console.log('🔙 Closing editor...');
+            saveCurrentNote();
+            document.getElementById('editorScreen').classList.remove('active');
+            document.body.style.overflow = '';
+            currentNoteId = null;
+            renderNotes();
+        }
+        
+        function applyFormatting(format) {
+            const textarea = document.getElementById('editorTextarea');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            if (!selectedText) {
+                const btn = format === 'bold' ? document.getElementById('boldBtn') : document.getElementById('italicBtn');
+                btn.classList.toggle('active');
+                return;
+            }
+            
+            let formattedText = '';
+            if (format === 'bold') {
+                formattedText = `**${selectedText}**`;
+            } else if (format === 'italic') {
+                formattedText = `*${selectedText}*`;
+            }
+            
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            textarea.focus();
+            textarea.setSelectionRange(start, start + formattedText.length);
+            
+            autoSaveNote();
+        }
+        
+        // ==========================================
+        // UI CONTROL FUNCTIONS
+        // ==========================================
+        
+        function toggleDrawer() {
+            const drawer = document.getElementById('drawer');
+            const overlay = document.getElementById('drawerOverlay');
+            drawer.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+        
+        function closeDrawer() {
+            document.getElementById('drawer').classList.remove('active');
+            document.getElementById('drawerOverlay').classList.remove('active');
+        }
+        
+        function toggleSearch() {
+            const searchContainer = document.getElementById('searchContainer');
+            const searchInput = document.getElementById('searchInput');
+            searchContainer.classList.toggle('active');
+            
+            if (searchContainer.classList.contains('active')) {
+                searchInput.focus();
+            } else {
+                searchInput.value = '';
+                renderNotes();
+            }
+        }
+        
+        function toggleView() {
+            currentView = currentView === 'list' ? 'grid' : 'list';
+            saveViewToStorage(currentView);
+            updateViewToggle();
+            renderNotes();
+        }
+        
+        function updateViewToggle() {
+            const btn = document.getElementById('viewToggleBtn');
+            const icon = btn.querySelector('i');
+            if (currentView === 'list') {
+                icon.classList.remove('fa-list');
+                icon.classList.add('fa-th');
+            } else {
+                icon.classList.remove('fa-th');
+                icon.classList.add('fa-list');
+            }
+        }
+        
+        function toggleTheme() {
+            const body = document.body;
+            const toggle = document.getElementById('themeToggle');
+            const isDark = body.getAttribute('data-theme') === 'dark';
+            
+            if (isDark) {
+                body.removeAttribute('data-theme');
+                toggle.classList.remove('active');
+                saveThemeToStorage(false);
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                toggle.classList.add('active');
+                saveThemeToStorage(true);
+            }
+        }
+        
+        // ==========================================
+        // MODAL FUNCTIONS
+        // ==========================================
+        
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+        
+        function hideModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        
+        function showDeleteModal() {
+            showModal('deleteModal');
+        }
+        
+        function confirmDelete() {
+            if (currentNoteId) {
+                deleteNote(currentNoteId);
+                closeEditor();
+                closeReader();
+            }
+            hideModal('deleteModal');
+        }
+        
+        function showColorModal() {
+            document.querySelectorAll('.color-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.color === selectedColor) {
+                    opt.classList.add('selected');
+                }
+            });
+            showModal('colorModal');
+        }
+        
+        function confirmColorChange() {
+            if (currentNoteId) {
+                changeNoteColor(currentNoteId, selectedColor);
+            }
+            hideModal('colorModal');
+        }
+        
+        function showSetPinModal() {
+            closeDrawer();
+            clearPinInputs('pin');
+            showModal('setPinModal');
+        }
+        
+        function confirmSetPin() {
+            const pin = getPinFromInputs('pin');
+            if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+                alert('Please enter a 4-digit PIN');
+                return;
+            }
+            
+            savePinToStorage(pin);
+            hideModal('setPinModal');
+            alert('PIN set successfully!');
+        }
+        
+        function showVerifyPinModal(message) {
+            document.getElementById('verifyPinText').textContent = message;
+            clearPinInputs('verifyPin');
+            showModal('verifyPinModal');
+        }
+        
+        function confirmVerifyPin() {
+            const enteredPin = getPinFromInputs('verifyPin');
+            const storedPin = loadPinFromStorage();
+            
+            if (enteredPin !== storedPin) {
+                alert('Incorrect PIN!');
+                clearPinInputs('verifyPin');
+                return;
+            }
+            
+            hideModal('verifyPinModal');
+            
+            if (currentPinAction === 'lock') {
+                applyNoteLock(currentNoteId, true);
+            } else if (currentPinAction === 'unlock') {
+                applyNoteLock(currentNoteId, false);
+            } else if (currentPinAction === 'viewLocked') {
+                openReader(currentNoteId);
+            } else if (currentPinAction === 'change') {
+                showSetPinModal();
+            } else if (currentPinAction === 'clear') {
+                clearPinFromStorage();
+                notes.forEach(note => {
+                    if (note.locked) note.locked = false;
+                });
+                saveNotesToStorage();
+                renderNotes();
+                alert('PIN cleared successfully! All notes unlocked.');
+            }
+            
+            currentPinAction = null;
+        }
+        
+        function getPinFromInputs(prefix) {
+            return ['1', '2', '3', '4']
+                .map(n => document.getElementById(`${prefix}Digit${n}`).value)
+                .join('');
+        }
+        
+        function clearPinInputs(prefix) {
+            ['1', '2', '3', '4'].forEach(n => {
+                document.getElementById(`${prefix}Digit${n}`).value = '';
+            });
+            document.getElementById(`${prefix}Digit1`).focus();
+        }
+        
+        function setupPinInputNavigation(prefix) {
+            ['1', '2', '3', '4'].forEach((n, index) => {
+                const input = document.getElementById(`${prefix}Digit${n}`);
+                
+                input.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    
+                    if (e.target.value && index < 3) {
+                        document.getElementById(`${prefix}Digit${index + 2}`).focus();
+                    }
+                });
+                
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                        document.getElementById(`${prefix}Digit${index}`).focus();
+                    }
+                });
+            });
+        }
+        
+        function handleChangePinClick() {
+            closeDrawer();
+            const storedPin = loadPinFromStorage();
+            if (!storedPin) {
+                alert('No PIN is currently set. Please set a PIN first.');
+                return;
+            }
+            currentPinAction = 'change';
+            showVerifyPinModal('Enter current PIN to change');
+        }
+        
+        function handleClearPinClick() {
+            closeDrawer();
+            const storedPin = loadPinFromStorage();
+            if (!storedPin) {
+                alert('No PIN is currently set.');
+                return;
+            }
+            currentPinAction = 'clear';
+            showVerifyPinModal('Enter PIN to clear and unlock all notes');
+        }
+        
+        function showAboutModal() {
+            closeDrawer();
+            showModal('aboutModal');
+        }
+        
+        // ==========================================
+        // EVENT LISTENERS
+        // ==========================================
+        
+        function initializeEventListeners() {
+            // Header buttons
+            document.getElementById('menuBtn').addEventListener('click', toggleDrawer);
+            document.getElementById('searchBtn').addEventListener('click', toggleSearch);
+            document.getElementById('viewToggleBtn').addEventListener('click', toggleView);
+            document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
+            
+            // FAB
+            document.getElementById('fabBtn').addEventListener('click', createNewNote);
+            
+            // Search
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                searchNotes(e.target.value);
+            });
+            
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Drawer menu items
+            document.getElementById('setPinBtn').addEventListener('click', showSetPinModal);
+            document.getElementById('changePinBtn').addEventListener('click', handleChangePinClick);
+            document.getElementById('clearPinBtn').addEventListener('click', handleClearPinClick);
+            document.getElementById('aboutBtn').addEventListener('click', showAboutModal);
+            
+            // Reader
+            document.getElementById('readerBackBtn').addEventListener('click', closeReader);
+            document.getElementById('readerLockBtn').addEventListener('click', toggleNoteLockFromReader);
+            document.getElementById('readerEditBtn').addEventListener('click', openEditorFromReader);
+            document.getElementById('readerDeleteBtn').addEventListener('click', deleteNoteFromReader);
+            
+            // Editor
+            document.getElementById('backBtn').addEventListener('click', closeEditor);
+            document.getElementById('colorPickerBtn').addEventListener('click', showColorModal);
+            document.getElementById('lockNoteBtn').addEventListener('click', () => {
+                if (currentNoteId) toggleNoteLock(currentNoteId);
+            });
+            document.getElementById('exportBtn').addEventListener('click', () => {
+                if (currentNoteId) exportNote(currentNoteId);
+            });
+            
+            // Auto-save
+            document.getElementById('editorTitle').addEventListener('input', autoSaveNote);
+            document.getElementById('editorTextarea').addEventListener('input', autoSaveNote);
+            
+            // Formatting
+            document.getElementById('boldBtn').addEventListener('click', () => applyFormatting('bold'));
+            document.getElementById('italicBtn').addEventListener('click', () => applyFormatting('italic'));
+            
+            // Delete modal
+            document.getElementById('cancelDeleteBtn').addEventListener('click', () => hideModal('deleteModal'));
+            document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+            
+            // Color modal
+            document.getElementById('cancelColorBtn').addEventListener('click', () => hideModal('colorModal'));
+            document.getElementById('confirmColorBtn').addEventListener('click', confirmColorChange);
+            
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+                    selectedColor = option.dataset.color;
+                });
+            });
+            
+            // Set PIN modal
+            document.getElementById('cancelSetPinBtn').addEventListener('click', () => hideModal('setPinModal'));
+            document.getElementById('confirmSetPinBtn').addEventListener('click', confirmSetPin);
+            setupPinInputNavigation('pin');
+            
+            // Verify PIN modal
+            document.getElementById('cancelVerifyPinBtn').addEventListener('click', () => {
+                hideModal('verifyPinModal');
+                currentPinAction = null;
+            });
+            document.getElementById('confirmVerifyPinBtn').addEventListener('click', confirmVerifyPin);
+            setupPinInputNavigation('verifyPin');
+            
+            // About modal
+            document.getElementById('closeAboutBtn').addEventListener('click', () => hideModal('aboutModal'));
+            
+            // Close modals on overlay click
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        overlay.classList.remove('active');
+                    }
+                });
+            });
+        }
+    </script>
+
+</body>
+</html>

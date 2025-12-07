@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HaiEncript</title>
+
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.png" type="image/x-icon">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.7/beautify-html.min.js"></script>
+    
+    <!-- Prism JS (Syntax Highlighting) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+    <!-- Icons & Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ============================
+           🎨 THEME VARIABLES
+           ============================ */
+        :root {
+            --bg-body: #050505;
+            --bg-card: #121212;
+            --bg-input: #1a1a1a;
+            --border: rgba(255, 255, 255, 0.08);
+            --text-main: #f4f4f5;
+            --text-muted: #71717a;
+            
+            --c-blue: #3b82f6;
+            --c-red: #ef4444;
+            --c-green: #22c55e;
+            --c-yellow: #eab308;
+            --c-purple: #a855f7;
+            --c-cyan: #06b6d4;
+
+            --sidebar-width: 260px;
+        }
+
+        /* ============================
+           GLOBAL STYLES
+           ============================ */
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            background-image: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #050505 60%);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        /* ============================
+           HEADER & SIDEBAR
+           ============================ */
+        .top-bar {
+            height: 64px;
+            background: rgba(5, 5, 5, 0.8);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 20px;
+            justify-content: space-between; z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .menu-btn { background: none; border: none; color: var(--text-main); font-size: 22px; cursor: pointer; }
+        
+        .sidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000;
+            backdrop-filter: blur(4px); display: none;
+        }
+        .sidebar-overlay.active { display: block; }
+
+        .sidebar {
+            position: fixed; top: 0; left: calc(var(--sidebar-width) * -1);
+            width: var(--sidebar-width); height: 100%;
+            background: rgba(18, 18, 18, 0.95);
+            border-right: 1px solid var(--border);
+            z-index: 2001; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: flex; flex-direction: column; backdrop-filter: blur(20px);
+        }
+        .sidebar.active { transform: translateX(var(--sidebar-width)); }
+
+        .sidebar-header {
+            height: 64px; display: flex; align-items: center; padding: 0 24px;
+            font-weight: 700; border-bottom: 1px solid var(--border);
+            background: linear-gradient(to right, rgba(59, 130, 246, 0.1), transparent);
+        }
+
+        .sidebar-menu { flex: 1; padding: 20px 10px; overflow-y: auto; }
+        .sidebar-item {
+            padding: 12px 16px; margin-bottom: 4px; display: flex; align-items: center; gap: 14px;
+            color: var(--text-muted); cursor: pointer; transition: 0.2s; border-radius: 8px; font-weight: 500;
+        }
+        .sidebar-item:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
+        .sidebar-item.active { background: rgba(59, 130, 246, 0.15); color: var(--c-blue); font-weight: 600; }
+
+        /* ============================
+           UI ELEMENTS
+           ============================ */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--c-blue), #2563eb);
+            color: white; border: none; padding: 10px 20px;
+            border-radius: 8px; font-weight: 600; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: transform 0.2s;
+        }
+        .btn-primary:active { transform: scale(0.97); }
+        .btn-purple {
+            background: linear-gradient(135deg, var(--c-purple), #7c3aed);
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+        }
+        .modern-input {
+            background: var(--bg-input); border: 1px solid var(--border); color: #fff;
+            padding: 12px 16px; border-radius: 10px; width: 100%; font-family: 'JetBrains Mono';
+        }
+        select.modern-input { appearance: none; cursor: pointer; }
+
+        /* ============================
+           VIEWS
+           ============================ */
+        #hybrid-container { flex: 1; position: relative; overflow: hidden; width: 100%; }
+        .app-view {
+            width: 100%; height: 100%; overflow-y: hidden; position: absolute;
+            top: 0; left: 0; display: none; flex-direction: column;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .app-view.active-view { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- APK VIEW (UPGRADED) --- */
+        .mega-upload-btn {
+            background: linear-gradient(145deg, #1a1a1a, #0f0f0f); 
+            border: 1px solid var(--border);
+            width: 200px; height: 200px; 
+            border-radius: 50%; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--text-muted); transition: 0.3s;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .mega-upload-btn:hover { border-color: var(--c-blue); transform: scale(1.05); color: var(--text-main); }
+        .mega-upload-btn i { font-size: 3.5rem; margin-bottom: 15px; color: var(--c-blue); }
+        .mega-upload-btn::before {
+            content: ''; position: absolute; inset: -6px; border-radius: 50%;
+            border: 2px dashed var(--border); transition: all 0.4s; animation: spin 20s linear infinite; opacity: 0;
+        }
+        .mega-upload-btn:hover::before { opacity: 0.3; border-color: var(--c-blue); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .apk-toolbar { 
+            padding: 10px 16px; background: rgba(20,20,20,0.8); display: flex; 
+            justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); gap: 10px;
+        }
+        .status-badge { font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid transparent; background: rgba(255,255,255,0.05); }
+        .status-badge.valid { color: var(--c-green); background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.2); }
+        .status-badge.invalid { color: var(--c-red); background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); }
+
+        #current-path {
+            display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+            padding: 8px 12px; background: rgba(255,255,255,0.05);
+            border-radius: 6px; color: var(--text-muted); font-size: 0.85rem; font-family: 'JetBrains Mono';
+            margin: 10px 16px; border: 1px solid var(--border);
+        }
+        #current-path span { cursor: pointer; transition: color 0.2s; }
+        #current-path span:hover { color: var(--c-blue); text-decoration: underline; }
+        .separator { color: var(--text-muted); opacity: 0.5; font-size: 0.8em; }
+        
+        #file-list { padding: 0 16px 20px 16px; overflow-y: auto; flex: 1; }
+        .file-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 14px; background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer; transition: all 0.15s ease;
+        }
+        .file-item:hover { background: rgba(255,255,255,0.05); transform: translateX(2px); }
+        .file-name { flex: 1; display: flex; align-items: center; gap: 12px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono'; font-size: 0.9rem; }
+        .file-size { font-size: 0.75rem; color: var(--text-muted); background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono'; }
+        
+        #apk-info { margin: 16px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; gap: 16px; }
+        #apk-icon { width: 50px; height: 50px; border-radius: 10px; object-fit: contain; background: transparent; }
+        #apk-details { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+        #apk-details strong { font-size: 1rem; color: var(--text-main); }
+        #apk-details span { font-size: 0.8rem; color: var(--text-muted); }
+
+        /* --- PASSWORD MANAGER STYLES --- */
+        .pass-list { padding: 20px; overflow-y: auto; flex: 1; }
+        .pass-card {
+            background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border);
+            padding: 16px; margin-bottom: 12px; display: flex; align-items: center; 
+            justify-content: space-between; transition: 0.2s;
+        }
+        .pass-card:hover { border-color: var(--c-cyan); }
+        .pass-info { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+        .pass-service { font-weight: 600; font-size: 1rem; color: var(--text-main); }
+        .pass-username { font-size: 0.85rem; color: var(--c-cyan); font-family: 'JetBrains Mono'; }
+        .pass-value-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+        .pass-value { font-size: 0.9rem; color: var(--text-muted); font-family: 'JetBrains Mono'; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
+        .pass-masked { -webkit-text-security: disc; }
+        .pass-actions { display: flex; gap: 8px; }
+        .pass-btn { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .pass-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
+        .pass-btn.delete:hover { background: rgba(239, 68, 68, 0.2); color: var(--c-red); border-color: rgba(239, 68, 68, 0.4); }
+
+        /* --- FETCHER VIEW --- */
+        .fetcher-container { padding: 24px; max-width: 1000px; margin: 0 auto; width: 100%; height: 100%; display: flex; flex-direction: column; gap: 16px; }
+        .code-window { flex: 1; display: flex; flex-direction: column; background: #0d0d0d; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .window-header { height: 40px; background: #1a1a1a; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; justify-content: space-between; }
+        .code-viewer-wrapper { flex: 1; overflow: auto; padding: 0; }
+        pre[class*="language-"] { margin: 0 !important; border: none !important; background: transparent !important; }
+
+        /* --- NOTES VIEW --- */
+        .notes-toolbar { padding: 10px 24px; display: flex; gap: 10px; background: rgba(5,5,5,0.5); border-bottom: 1px solid var(--border); }
+        .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 20px; overflow-y: auto; flex: 1; align-content: start; }
+        .note-card {
+            background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); 
+            cursor: pointer; position: relative; transition: all 0.2s ease; overflow: hidden; 
+            border-left: 3px solid var(--c-cyan); height: 180px; display: flex; flex-direction: column; padding: 16px;
+        }
+        .note-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .note-card-title { font-size: 1rem; font-weight: 600; color: var(--text-main); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: space-between; }
+        .note-card-body { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
+        .note-card-footer { margin-top: 10px; font-size: 0.7rem; color: rgba(255,255,255,0.3); text-align: right; }
+        .note-color-red { border-left-color: var(--c-red) !important; background: linear-gradient(160deg, #161616 0%, #1f0f0f 100%); }
+        .note-color-green { border-left-color: var(--c-green) !important; background: linear-gradient(160deg, #161616 0%, #0f1f12 100%); }
+        .note-color-blue { border-left-color: var(--c-blue) !important; background: linear-gradient(160deg, #161616 0%, #0f121f 100%); }
+        .note-color-yellow { border-left-color: var(--c-yellow) !important; background: linear-gradient(160deg, #161616 0%, #1f1a0f 100%); }
+        .note-color-purple { border-left-color: var(--c-purple) !important; background: linear-gradient(160deg, #161616 0%, #170f1f 100%); }
+
+        .fab {
+            position: fixed; bottom: 32px; right: 32px; width: 56px; height: 56px;
+            background: var(--c-blue); border-radius: 50%; border: none; color: white;
+            font-size: 24px; box-shadow: 0 10px 25px rgba(59, 130, 246, 0.5); 
+            z-index: 50; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* --- SETTINGS VIEW --- */
+        .settings-container { padding: 30px; max-width: 600px; margin: 0 auto; width: 100%; }
+        .settings-group { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 20px; }
+        .settings-header { padding: 15px 20px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border); font-weight: 600; color: var(--c-blue); display: flex; align-items: center; gap: 10px; }
+        .settings-row { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+        .settings-row:last-child { border-bottom: none; }
+        .setting-btn {
+            padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);
+            background: rgba(255,255,255,0.05); color: var(--text-main); font-size: 0.9rem;
+            cursor: pointer; transition: 0.2s;
+        }
+        .setting-btn:hover { background: rgba(255,255,255,0.1); }
+        .setting-btn.danger { color: var(--c-red); border-color: rgba(239, 68, 68, 0.3); }
+        .setting-btn.danger:hover { background: rgba(239, 68, 68, 0.1); }
+        .setting-btn.primary { color: var(--c-green); border-color: rgba(34, 197, 94, 0.3); }
+
+        /* --- OVERLAYS --- */
+        .fullscreen-overlay { position: fixed; inset: 0; background: var(--bg-body); z-index: 2500; display: none; flex-direction: column; }
+        .overlay-header { height: 64px; background: rgba(5,5,5,0.9); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+        .editor-textarea { flex: 1; background: #0d0d0d; color: var(--text-main); border: none; padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.6; resize: none; }
+        .reader-content { padding: 30px; overflow-y: auto; flex: 1; font-size: 1.1rem; line-height: 1.8; }
+        
+        /* Media Preview in APK Editor */
+        .image-preview-container { flex: 1; background: #0d0d0d; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .image-preview-content { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 3000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal { background: var(--bg-card); padding: 24px; border-radius: 20px; width: 90%; max-width: 500px; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,0.5); animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        
+        .color-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
+        .color-dot { height: 50px; border-radius: 12px; cursor: pointer; border: 2px solid transparent; }
+        
+        /* --- PATTERN & PIN LOCK --- */
+        #pattern-container { position: relative; width: 240px; height: 240px; margin: 20px auto; touch-action: none; display: none; }
+        #pattern-container.active-mode { display: block; }
+        #pin-container { position: relative; width: 100%; max-width: 280px; margin: 10px auto; display: none; flex-direction: column; align-items: center; }
+        #pin-container.active-mode { display: flex; }
+        .pattern-grid { width: 100%; height: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; place-items: center; pointer-events: none; }
+        .pattern-dot { width: 14px; height: 14px; background: rgba(255,255,255,0.2); border-radius: 50%; transition: 0.2s; }
+        .pattern-dot.active { background: var(--c-blue); box-shadow: 0 0 15px var(--c-blue); transform: scale(1.5); }
+        .pattern-dot.error { background: var(--c-red); box-shadow: 0 0 15px var(--c-red); }
+        .pattern-dot.success { background: var(--c-green); box-shadow: 0 0 15px var(--c-green); }
+        #pattern-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
+        
+        .pin-dots { display: flex; gap: 24px; margin-bottom: 30px; justify-content: center; }
+        .pin-dot-display { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); background: transparent; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .pin-dot-display.filled { background: var(--c-blue); border-color: var(--c-blue); transform: scale(1.1); box-shadow: 0 0 12px rgba(59, 130, 246, 0.6); }
+        .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 24px; width: 100%; }
+        .pin-btn { width: 70px; height: 70px; border-radius: 50%; border: none; background: rgba(255,255,255,0.03); color: var(--text-main); font-size: 1.5rem; font-weight: 500; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.1s ease; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); user-select: none; }
+        .pin-btn:active { background: rgba(255,255,255,0.15); transform: scale(0.92); }
+        .pin-btn.utility { font-size: 1.2rem; background: transparent; color: var(--text-muted); }
+        .pin-btn.utility:active { background: rgba(255,255,255,0.05); color: var(--text-main); }
+        .lockout-screen { position: absolute; inset: 0; background: rgba(10, 10, 10, 0.95); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; color: var(--c-red); text-align: center; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+        .shake-anim { animation: shake 0.4s ease-in-out; }
+
+        /* --- UTILS --- */
+        .hidden { display: none !important; }
+        .icon-btn { background: none; border: none; color: var(--text-main); font-size: 1rem; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-radius: 6px; transition: 0.2s; }
+        .icon-btn:hover { background: rgba(255,255,255,0.1); }
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: rgba(59, 130, 246, 0.2); backdrop-filter: blur(10px); border: 1px solid rgba(59, 130, 246, 0.4); color: white; padding: 12px 24px; border-radius: 50px; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; opacity: 0; transition: 0.4s; display: flex; align-items: center; gap: 10px; }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .close-modal-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; }
+
+        #loading-overlay { position: fixed; inset: 0; background: rgba(5,5,5,0.8); z-index: 3500; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        #loading-overlay i { font-size: 2.5rem; color: var(--c-blue); }
+    </style>
+</head>
+<body>
+
+    <!-- LOADING SPINNER -->
+    <div id="loading-overlay"><div><i class="fas fa-spinner fa-spin"></i></div></div>
+
+    <!-- TOAST -->
+    <div id="toast"><i class="fas fa-info-circle"></i> <span id="toast-msg">Notification</span></div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-layer-group" style="margin-right: 12px; color: var(--c-blue);"></i> HaiEncript
+        </div>
+        <div class="sidebar-menu">
+            <div class="sidebar-item active" onclick="switchView('notes')">
+                <i class="fas fa-sticky-note" style="color: var(--c-yellow);"></i> My Notes
+            </div>
+            <div class="sidebar-item" onclick="switchView('apk')">
+                <i class="fas fa-box-open" style="color: var(--c-purple);"></i> APK Viewer
+            </div>
+            <!-- PASSWORD MANAGER -->
+            <div class="sidebar-item" onclick="openPasswordManager()">
+                <i class="fas fa-key" style="color: var(--c-cyan);"></i> Password Manager
+            </div>
+            <div class="sidebar-item" onclick="switchView('encrypt')">
+                <i class="fas fa-shield-alt" style="color: var(--c-red);"></i> Encryptor
+            </div>
+            <div class="sidebar-item" onclick="switchView('fetcher')">
+                <i class="fas fa-code" style="color: var(--c-green);"></i> Source Fetcher
+            </div>
+        </div>
+        
+        <div style="padding: 16px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2);">
+            <div class="sidebar-item" onclick="switchView('settings')">
+                <i class="fas fa-cog" style="color: var(--text-muted);"></i> Settings
+            </div>
+        </div>
+    </aside>
+
+    <!-- HEADER -->
+    <header class="top-bar">
+        <button class="menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <span style="font-weight: 600; font-size: 1rem;" id="header-title">My Notes</span>
+        <div style="width: 24px;"></div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <div id="hybrid-container">
+        
+        <!-- 1. NOTES -->
+        <div id="view-notes" class="app-view active-view">
+            <div class="notes-toolbar">
+                <input type="text" id="searchInput" class="modern-input" placeholder="Search notes..." style="background: rgba(255,255,255,0.05); border:none;">
+            </div>
+            <div id="emptyState" style="text-align: center; padding-top: 100px; display: none;">
+                <i class="fas fa-sticky-note" style="font-size: 60px; color: var(--border); margin-bottom: 20px;"></i>
+                <p style="color: var(--text-muted);">No notes created yet</p>
+            </div>
+            <div id="notesGrid" class="notes-grid"></div>
+            <button class="fab" onclick="createNewNote()"><i class="fas fa-plus"></i></button>
+        </div>
+
+        <!-- 2. APK VIEW (ADVANCED) -->
+        <div id="view-apk" class="app-view" style="overflow-y: hidden; display: none; flex-direction: column;">
+            <input type="file" id="apk-input" accept=".apk,.zip,.jar" style="display: none;" />
+            <div id="apk-upload-ui" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div class="mega-upload-btn" onclick="document.getElementById('apk-input').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span style="font-weight: 600;">OPEN FILE</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; letter-spacing: 0.5px;">Supported: .APK, .ZIP, .JAR</p>
+            </div>
+            <div id="apk-files-ui" style="display: none; height: 100%; flex-direction: column;">
+                <div class="apk-toolbar">
+                    <button id="signature-status-btn" class="status-badge" onclick="showSignatureWarning()" disabled>
+                         <i class="fas fa-shield-alt"></i> Status
+                    </button>
+                    <button id="download-zip-btn" class="icon-btn" onclick="downloadArchive()" style="color: var(--c-green); font-size: 0.8rem;"><i class="fas fa-file-export"></i> Export ZIP</button>
+                </div>
+                <div id="apk-info" style="display: none;">
+                    <img id="apk-icon" src="" alt="Icon" onerror="this.style.display='none'">
+                    <div id="apk-details">
+                        <strong id="apk-name">App Name</strong>
+                        <span id="apk-package">Package</span>
+                        <span id="apk-version">Version</span>
+                        <span id="apk-size">Size</span>
+                    </div>
+                </div>
+                <div id="current-path"></div>
+                <div id="file-list"></div>
+            </div>
+        </div>
+
+        <!-- 3. PASSWORD MANAGER -->
+        <div id="view-passwords" class="app-view">
+            <div class="notes-toolbar">
+                <input type="text" id="passSearchInput" class="modern-input" placeholder="Search passwords..." oninput="renderPasswords()" style="background: rgba(255,255,255,0.05); border:none;">
+            </div>
+            <div id="passEmptyState" style="text-align: center; padding-top: 100px; display: none;">
+                <i class="fas fa-key" style="font-size: 60px; color: var(--border); margin-bottom: 20px;"></i>
+                <p style="color: var(--text-muted);">No passwords saved yet</p>
+            </div>
+            <div id="passwordsList" class="pass-list"></div>
+            <button class="fab" style="background: var(--c-cyan);" onclick="showAddPassModal()"><i class="fas fa-plus"></i></button>
+        </div>
+
+        <!-- 4. ENCRYPTION -->
+        <div id="view-encrypt" class="app-view" style="overflow-y: auto;">
+            <div class="fetcher-container">
+                <div style="background: var(--bg-card); padding: 24px; border-radius: 16px; border: 1px solid var(--border);">
+                    <h3 style="margin-bottom: 16px; color: var(--c-red);"><i class="fas fa-user-secret"></i> HTML/JS Obfuscator</h3>
+                    <textarea id="enc-input" class="modern-input" style="height:120px; resize: none; margin-bottom: 16px;" placeholder="Code to encrypt..."></textarea>
+                    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                        <button onclick="doEncrypt()" class="btn-primary" style="flex:1;"><i class="fas fa-lock"></i> Obfuscate</button>
+                        <button onclick="doDecrypt()" class="btn-primary btn-purple" style="flex:1;"><i class="fas fa-unlock"></i> De-obfuscate</button>
+                    </div>
+                    <textarea id="enc-output" class="modern-input" style="height:120px; resize: none;" readonly placeholder="Result..."></textarea>
+                    <div style="display: flex; gap: 12px; margin-top: 10px;">
+                        <button onclick="copyEncOutput()" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid var(--border); box-shadow: none;"><i class="far fa-copy" style="color: var(--c-blue);"></i> Copy</button>
+                        <button onclick="saveEncAsNote()" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid var(--border); box-shadow: none;"><i class="fas fa-save" style="color: var(--c-green);"></i> Save Note</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. FETCHER -->
+        <div id="view-fetcher" class="app-view">
+            <div class="fetcher-container">
+                <div style="display: flex; gap: 12px;">
+                    <input type="text" id="fetch-url" class="modern-input" placeholder="https://example.com" value="https://google.com">
+                    <button onclick="fetchSource()" id="fetch-btn" class="btn-primary">GET</button>
+                </div>
+                <div class="code-window">
+                    <div class="window-header">
+                        <div style="display:flex; gap:6px;"><div style="width:10px; height:10px; background:#ff5f56; border-radius:50%;"></div><div style="width:10px; height:10px; background:#ffbd2e; border-radius:50%;"></div><div style="width:10px; height:10px; background:#27c93f; border-radius:50%;"></div></div>
+                        <span style="font-size:0.8rem; color:#777;">Source Viewer</span>
+                        <div style="display:flex; gap: 10px;">
+                            <button onclick="saveFetchAsNote()" class="icon-btn" style="font-size:0.9rem; color:var(--c-purple);"><i class="fas fa-save"></i> Save Note</button>
+                            <button onclick="copySource()" class="icon-btn" style="font-size:0.9rem; color:var(--c-blue);"><i class="far fa-copy"></i> Copy</button>
+                        </div>
+                    </div>
+                    <div class="code-viewer-wrapper">
+                        <pre><code id="fetch-output" class="language-html"></code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. SETTINGS -->
+        <div id="view-settings" class="app-view">
+            <div class="settings-container">
+                <div class="settings-group">
+                    <div class="settings-header"><i class="fas fa-shield-alt"></i> Access & Security</div>
+                    <div class="settings-row" id="row-set-pin">
+                        <div><div style="font-weight: 500;">Set Security</div><div style="font-size: 0.8rem; color: var(--text-muted);">Secure notes & passwords</div></div>
+                        <button class="setting-btn primary" onclick="showSecurityChoice()">Create</button>
+                    </div>
+                    <div class="settings-row hidden" id="row-change-pin">
+                        <div><div style="font-weight: 500;">Change Security</div><div style="font-size: 0.8rem; color: var(--text-muted);">Update existing PIN/Pattern</div></div>
+                        <button class="setting-btn" onclick="showSecurityChoice(true)">Change</button>
+                    </div>
+                    <div class="settings-row">
+                        <div><div style="font-weight: 500;">Recovery Setup</div><div style="font-size: 0.8rem; color: var(--text-muted);">Forget Password Question</div></div>
+                        <button class="setting-btn" onclick="handleRecoveryClick()">Setup</button>
+                    </div>
+                    <div class="settings-row hidden" id="row-clear-pin">
+                        <div><div style="font-weight: 500;">Clear Security</div><div style="font-size: 0.8rem; color: var(--text-muted);">Remove security lock</div></div>
+                        <button class="setting-btn danger" onclick="handleClearPinClick()">Clear</button>
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <div class="settings-header"><i class="fas fa-info-circle"></i> About</div>
+                    <div class="settings-row">
+                        <div><div style="font-weight: 500;">Version</div></div>
+                        <div style="color: var(--text-muted);">3.0.0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAYS & MODALS -->
+    
+    <!-- ADD PASSWORD MODAL -->
+    <div class="modal-overlay" id="addPassModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span style="font-weight: 600;">Add Password</span>
+                <button onclick="hideModal('addPassModal')" class="close-modal-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <input type="text" id="newPassService" class="modern-input" placeholder="Service (e.g. Facebook, Google)">
+                <input type="text" id="newPassUser" class="modern-input" placeholder="Username / Email">
+                <input type="text" id="newPassValue" class="modern-input" placeholder="Password">
+                <button class="btn-primary" onclick="saveNewPassword()" style="margin-top: 10px;">Save Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECOVERY MODAL -->
+    <div class="modal-overlay" id="recoveryModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span style="font-weight: 600;" id="recModalTitle">Recovery Setup</span>
+                <button onclick="hideModal('recoveryModal')" class="close-modal-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div id="recSetupMode">
+                    <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px;">Select a question to recover your PIN if forgotten.</p>
+                    <select id="recQuestionSelect" class="modern-input" style="margin-bottom:10px;">
+                        <option value="pet">What is your first pet's name?</option>
+                        <option value="school">What school did you go to?</option>
+                        <option value="city">What city were you born in?</option>
+                        <option value="mom">What is your mother's maiden name?</option>
+                    </select>
+                    <input type="text" id="recAnswerInput" class="modern-input" placeholder="Your Answer">
+                    <button class="btn-primary" onclick="saveRecovery()" style="margin-top: 10px;">Save Recovery</button>
+                </div>
+                <div id="recVerifyMode" class="hidden">
+                    <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:10px;" id="recVerifyQuestionText">Question...</p>
+                    <input type="text" id="recVerifyInput" class="modern-input" placeholder="Answer">
+                    <button class="btn-primary" onclick="verifyRecovery()" style="margin-top: 10px;">Reset PIN</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Modal for APK Warnings/Media -->
+    <div class="modal-overlay" id="genericModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span id="genericModalTitle" style="font-weight: 600;">Info</span>
+                <button onclick="hideModal('genericModal')" class="close-modal-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="genericModalContent"></div>
+        </div>
+    </div>
+
+    <!-- APK Editor/Viewer Overlay -->
+    <div class="fullscreen-overlay" id="apkEditorScreen">
+        <div class="overlay-header">
+            <button class="icon-btn" onclick="closeApkEditor()"><i class="fas fa-arrow-left"></i> Back</button>
+            <span id="apkEditorFileName" style="max-width: 60%; overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono';">filename.xml</span>
+            <button class="icon-btn" id="saveApkBtn" onclick="saveApkFile()" style="color: var(--c-green);"><i class="fas fa-save"></i> Save</button>
+        </div>
+        <!-- Text Editor (Text Area) -->
+        <textarea id="apkEditorContent" class="editor-textarea" spellcheck="false" style="display:none;"></textarea>
+        <!-- Image/Media Viewer -->
+        <div id="apkImageViewer" class="image-preview-container" style="display:none;"></div>
+    </div>
+
+    <!-- Editor Overlay (Notes) -->
+    <div class="fullscreen-overlay" id="editorScreen">
+        <div class="overlay-header">
+            <button class="icon-btn" onclick="closeEditor()"><i class="fas fa-arrow-left"></i></button>
+            <div style="display: flex; gap: 15px;">
+                <button class="icon-btn" onclick="importUrlToNote()"><i class="fas fa-globe" style="color: var(--c-blue);"></i></button>
+                <button class="icon-btn" id="lockNoteBtn"><i class="fas fa-lock-open"></i></button>
+                <button class="icon-btn" id="colorPickerBtn"><i class="fas fa-palette"></i></button>
+                <button class="icon-btn" id="exportBtn"><i class="fas fa-download"></i></button>
+                <button class="icon-btn" style="color: var(--c-green);" onclick="closeEditor()"><i class="fas fa-check"></i></button>
+            </div>
+        </div>
+        <div style="padding: 20px;">
+            <input type="text" id="editorTitle" class="modern-input" placeholder="Title" style="font-size: 1.5rem; font-weight: bold; background: transparent; border: none; padding-left: 0;">
+            <div style="border-bottom: 1px solid var(--border); margin: 10px 0;"></div>
+        </div>
+        <textarea id="editorTextarea" class="editor-textarea" placeholder="Start typing..."></textarea>
+    </div>
+
+    <!-- Reader Overlay (Notes) -->
+    <div class="fullscreen-overlay" id="readerScreen">
+        <div class="overlay-header">
+            <button class="icon-btn" onclick="closeReader()"><i class="fas fa-arrow-left"></i></button>
+            <div style="display: flex; gap: 15px;">
+                <button class="icon-btn" id="readerLockBtn"><i class="fas fa-lock-open"></i></button>
+                <button class="icon-btn" id="readerEditBtn"><i class="fas fa-edit"></i></button>
+                <button class="icon-btn" id="readerDeleteBtn" style="color: var(--c-red);"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+        <div class="reader-content">
+            <h1 id="readerTitle" style="font-size: 2rem; margin-bottom: 10px;">Title</h1>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 30px;">
+                <i class="fas fa-clock"></i> <span id="readerDate">Date</span>
+            </div>
+            <div id="readerText" style="white-space: pre-wrap; font-family: 'JetBrains Mono', monospace;">Content</div>
+        </div>
+    </div>
+
+    <!-- SECURITY MODALS -->
+    <div class="modal-overlay" id="securityChoiceModal">
+        <div class="modal">
+            <h3 style="text-align: center; margin-bottom: 20px;">Choose Security</h3>
+            <div style="display:grid; gap:12px;">
+                <button class="btn-primary" onclick="initSecuritySetup('pin')"><i class="fas fa-key"></i> Create PIN</button>
+                <button class="btn-primary btn-purple" onclick="initSecuritySetup('pattern')"><i class="fas fa-draw-polygon"></i> Create Pattern</button>
+            </div>
+            <div style="text-align: center; margin-top:20px;"><button class="icon-btn" onclick="hideModal('securityChoiceModal')">Cancel</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="colorModal">
+        <div class="modal">
+            <h3>Choose Color</h3>
+            <div class="color-grid">
+                <div class="color-dot" style="background:#00BCD4;" onclick="selectColor('cyan')"></div>
+                <div class="color-dot" style="background:#ef4444;" onclick="selectColor('red')"></div>
+                <div class="color-dot" style="background:#22c55e;" onclick="selectColor('green')"></div>
+                <div class="color-dot" style="background:#3b82f6;" onclick="selectColor('blue')"></div>
+                <div class="color-dot" style="background:#eab308;" onclick="selectColor('yellow')"></div>
+                <div class="color-dot" style="background:#a855f7;" onclick="selectColor('purple')"></div>
+            </div>
+            <div style="text-align: right;"><button class="icon-btn" onclick="hideModal('colorModal')">Cancel</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="patternModal">
+        <div class="modal" style="text-align: center;">
+            <h3 id="patternTitle">Draw Pattern</h3>
+            <p id="patternSubTitle" style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 20px;">Enter Security</p>
+            <div style="position: relative;">
+                <div id="lockoutScreen" class="lockout-screen hidden">
+                    <i class="fas fa-lock" style="font-size: 40px; margin-bottom: 10px;"></i>
+                    <div>Too many attempts</div>
+                    <div id="lockoutTimer" class="lockout-timer">30</div>
+                    <div style="font-size: 0.8rem; margin-top: 5px;">seconds</div>
+                </div>
+                <div id="pattern-container">
+                    <canvas id="pattern-canvas" width="240" height="240"></canvas>
+                    <div class="pattern-grid">
+                        <div class="pattern-dot" data-id="1"></div><div class="pattern-dot" data-id="2"></div><div class="pattern-dot" data-id="3"></div>
+                        <div class="pattern-dot" data-id="4"></div><div class="pattern-dot" data-id="5"></div><div class="pattern-dot" data-id="6"></div>
+                        <div class="pattern-dot" data-id="7"></div><div class="pattern-dot" data-id="8"></div><div class="pattern-dot" data-id="9"></div>
+                    </div>
+                </div>
+                <div id="pin-container">
+                    <div class="pin-dots"><div class="pin-dot-display"></div><div class="pin-dot-display"></div><div class="pin-dot-display"></div><div class="pin-dot-display"></div></div>
+                    <div class="pin-pad">
+                        <button class="pin-btn" onclick="handlePinInput('1')">1</button><button class="pin-btn" onclick="handlePinInput('2')">2</button><button class="pin-btn" onclick="handlePinInput('3')">3</button>
+                        <button class="pin-btn" onclick="handlePinInput('4')">4</button><button class="pin-btn" onclick="handlePinInput('5')">5</button><button class="pin-btn" onclick="handlePinInput('6')">6</button>
+                        <button class="pin-btn" onclick="handlePinInput('7')">7</button><button class="pin-btn" onclick="handlePinInput('8')">8</button><button class="pin-btn" onclick="handlePinInput('9')">9</button>
+                        <button class="pin-btn utility" onclick="handlePinInput('clr')">CLR</button><button class="pin-btn" onclick="handlePinInput('0')">0</button><button class="pin-btn utility" onclick="handlePinInput('del')"><i class="fas fa-backspace"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FORGOT PASSWORD BUTTON -->
+            <button id="forgotBtn" class="hidden" onclick="handleForgot()" style="margin-top:15px; background:none; border:none; color:var(--c-blue); cursor:pointer; font-size:0.9rem;">Forgot Password?</button>
+
+            <div style="display: flex; justify-content: center; margin-top: 10px;">
+                <button class="icon-btn" id="patternCancelBtn" onclick="hideModal('patternModal')" style="color: var(--text-muted);">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================
+        // UTILS
+        // ============================
+        function showToast(msg, isError=false) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            t.style.background = isError ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)';
+            t.style.border = isError ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(59, 130, 246, 0.4)';
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('active');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function switchView(viewId) {
+            document.querySelectorAll('.app-view').forEach(el => {
+                el.classList.remove('active-view');
+                el.style.display = 'none';
+            });
+            const target = document.getElementById('view-' + viewId);
+            target.classList.add('active-view');
+            target.style.display = 'flex'; // Consistent flex display
+
+            const titles = { 'apk': 'APK Viewer', 'encrypt': 'Encryptor', 'notes': 'My Notes', 'fetcher': 'Web Fetcher', 'settings': 'Settings', 'passwords': 'Passwords' };
+            document.getElementById('header-title').textContent = titles[viewId];
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            const items = document.querySelectorAll('.sidebar-item');
+            
+            // Map indexes
+            if(viewId==='notes') { items[0].classList.add('active'); renderNotes(); }
+            if(viewId==='apk') items[1].classList.add('active');
+            if(viewId==='passwords') { items[2].classList.add('active'); renderPasswords(); }
+            if(viewId==='encrypt') items[3].classList.add('active');
+            if(viewId==='fetcher') items[4].classList.add('active');
+            if(viewId==='settings') { items[5].classList.add('active'); updatePinMenuUI(); }
+            
+            if(document.querySelector('.sidebar').classList.contains('active')) toggleSidebar();
+        }
+
+        function hideModal(id) { document.getElementById(id).style.display = 'none'; if(id==='patternModal') patternFlowState='none'; }
+        
+        function updatePinMenuUI() {
+            const hasPin = !!localStorage.getItem('appPin');
+            document.getElementById('row-set-pin').classList.toggle('hidden', hasPin);
+            document.getElementById('row-change-pin').classList.toggle('hidden', !hasPin);
+            document.getElementById('row-clear-pin').classList.toggle('hidden', !hasPin);
+        }
+
+        // ============================
+        // PASSWORD MANAGER LOGIC
+        // ============================
+        let savedPasswords = JSON.parse(localStorage.getItem('saved_passwords') || '[]');
+
+        function openPasswordManager() {
+            if(!localStorage.getItem('appPin')) {
+                showToast("Please set a PIN/Pattern in Settings first!", true);
+                switchView('settings');
+                return;
+            }
+            promptPattern("Unlock Passwords", () => {
+                switchView('passwords');
+            });
+        }
+
+        function renderPasswords() {
+            const list = document.getElementById('passwordsList');
+            const empty = document.getElementById('passEmptyState');
+            const search = document.getElementById('passSearchInput').value.toLowerCase();
+            list.innerHTML = '';
+            
+            const filtered = savedPasswords.filter(p => 
+                p.service.toLowerCase().includes(search) || 
+                p.username.toLowerCase().includes(search)
+            );
+
+            if(filtered.length === 0) {
+                empty.style.display = 'block';
+            } else {
+                empty.style.display = 'none';
+                filtered.forEach((pass, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'pass-card';
+                    div.innerHTML = `
+                        <div class="pass-info">
+                            <div class="pass-service">${pass.service}</div>
+                            <div class="pass-username">${pass.username}</div>
+                            <div class="pass-value-row">
+                                <span class="pass-value pass-masked" id="pass-val-${index}">${pass.password}</span>
+                            </div>
+                        </div>
+                        <div class="pass-actions">
+                            <button class="pass-btn" onclick="copyToClipboard('${pass.password}')"><i class="far fa-copy"></i></button>
+                            <button class="pass-btn" onclick="togglePassVisibility(${index})"><i class="far fa-eye"></i></button>
+                            <button class="pass-btn delete" onclick="deletePassword(${pass.id})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+        }
+
+        function showAddPassModal() {
+            document.getElementById('newPassService').value = '';
+            document.getElementById('newPassUser').value = '';
+            document.getElementById('newPassValue').value = '';
+            document.getElementById('addPassModal').style.display = 'flex';
+        }
+
+        function saveNewPassword() {
+            const s = document.getElementById('newPassService').value;
+            const u = document.getElementById('newPassUser').value;
+            const p = document.getElementById('newPassValue').value;
+            if(!s || !p) return showToast("Service and Password required", true);
+            savedPasswords.unshift({ id: Date.now(), service: s, username: u, password: p });
+            localStorage.setItem('saved_passwords', JSON.stringify(savedPasswords));
+            hideModal('addPassModal');
+            renderPasswords();
+            showToast("Password Saved");
+        }
+
+        function deletePassword(id) {
+            if(confirm("Delete this password?")) {
+                savedPasswords = savedPasswords.filter(p => p.id !== id);
+                localStorage.setItem('saved_passwords', JSON.stringify(savedPasswords));
+                renderPasswords();
+            }
+        }
+
+        function togglePassVisibility(idx) {
+            const el = document.getElementById(`pass-val-${idx}`);
+            el.classList.toggle('pass-masked');
+        }
+
+        function copyToClipboard(txt) {
+            navigator.clipboard.writeText(txt).then(() => showToast("Copied to clipboard"));
+        }
+
+        // ============================
+        // APK VIEWER LOGIC (ADVANCED INTEGRATION)
+        // ============================
+        let zip = null;
+        let currentPath = '';
+        let currentZipFiles = {};
+        let zipHistory = []; // Support for nested ZIPs
+        let isSignatureValid = false;
+        let currentEditingFile = null;
+        
+        const zipFileExtensions = ['.zip', '.jar', '.apk'];
+        const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico'];
+        const videoExtensions = ['.mp4', '.webm', '.ogg'];
+        
+        document.getElementById('apk-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showLoading(true);
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                zip = await JSZip.loadAsync(arrayBuffer);
+                currentZipFiles = zip.files;
+                currentPath = '';
+                zipHistory = [];
+                isSignatureValid = true;
+                
+                updateSignatureStatusUI();
+                await displayApkInfo(zip, file.name, file.size);
+                displayFiles('');
+                
+                document.getElementById('apk-upload-ui').style.display = 'none';
+                document.getElementById('apk-files-ui').style.display = 'flex';
+                showToast("Archive Loaded Successfully");
+            } catch (err) {
+                console.error(err);
+                showToast("Error: " + err.message, true);
+                document.getElementById('apk-files-ui').style.display = 'none';
+                document.getElementById('apk-upload-ui').style.display = 'flex';
+            } finally {
+                showLoading(false);
+            }
+            e.target.value = '';
+        });
+
+        function updateSignatureStatusUI() {
+            const btn = document.getElementById('signature-status-btn');
+            btn.disabled = false;
+            btn.classList.remove('valid', 'invalid');
+            if (isSignatureValid) {
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Valid';
+                btn.classList.add('valid');
+            } else {
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Invalid';
+                btn.classList.add('invalid');
+            }
+        }
+
+        function showSignatureWarning() {
+            const title = isSignatureValid ? 'Signature Valid' : 'Signature Invalidated';
+            const icon = isSignatureValid ? 'fa-check-circle' : 'fa-exclamation-triangle';
+            const color = isSignatureValid ? 'var(--c-green)' : 'var(--c-red)';
+            const desc = isSignatureValid 
+                ? "The archive has not been modified. The original signature is intact."
+                : "This archive has been modified. The signature is invalid. You must re-sign this APK (using apktool/jarsigner) before installing on Android.";
+            
+            const html = `
+                <div style="display:flex; gap:16px; align-items:flex-start;">
+                    <i class="fas ${icon}" style="font-size: 2.5rem; color: ${color}; margin-top:5px;"></i>
+                    <div>
+                        <p style="margin-bottom:10px; line-height:1.5;">${desc}</p>
+                    </div>
+                </div>`;
+            
+            showGenericModal(title, html);
+        }
+
+        async function displayApkInfo(zipObj, name, size) {
+            document.getElementById('apk-info').style.display = 'flex';
+            document.getElementById('apk-name').textContent = name || "Archive";
+            document.getElementById('apk-package').textContent = "Total Files: " + Object.keys(zipObj.files).length;
+            document.getElementById('apk-size').textContent = formatBytes(size);
+            document.getElementById('apk-version').textContent = "Root";
+
+            // Find Icon
+            let iconBlob = null;
+            const fileKeys = Object.keys(zipObj.files);
+            // Smart search for icon
+            let iconPath = fileKeys.find(key => (key.includes('mipmap') || key.includes('drawable')) && (key.endsWith('ic_launcher.png') || key.endsWith('icon.png')));
+            if(!iconPath) iconPath = fileKeys.find(key => key.endsWith('ic_launcher.png') || key.endsWith('icon.png'));
+
+            if(iconPath) {
+                try {
+                    const blob = await zipObj.files[iconPath].async('blob');
+                    document.getElementById('apk-icon').src = URL.createObjectURL(blob);
+                    document.getElementById('apk-icon').style.display = 'block';
+                } catch(e) {}
+            } else {
+                document.getElementById('apk-icon').style.display = 'none';
+            }
+        }
+
+        function displayFiles(path) {
+            currentPath = path;
+            const list = document.getElementById('file-list'); 
+            list.innerHTML = '';
+            
+            // Breadcrumb Logic
+            const bc = document.getElementById('current-path');
+            bc.innerHTML = '';
+            
+            if(zipHistory.length > 0) {
+                 bc.innerHTML += `<span onclick="goBackZip()" style="color:var(--c-purple);"><i class="fas fa-arrow-left"></i> Parent Zip</span> <span class="separator">/</span> `;
+            }
+
+            if(path === '') {
+                bc.innerHTML += '<span onclick="displayFiles(\'\')"><i class="fas fa-home"></i> Root</span>';
+            } else {
+                let parts = path.split('/').filter(Boolean);
+                let build = '';
+                let html = '<span onclick="displayFiles(\'\')">Root</span>';
+                parts.forEach(p => {
+                    build += p + '/';
+                    html += ` <span class="separator">/</span> <span onclick="displayFiles('${build}')">${p}</span>`;
+                });
+                bc.innerHTML += html;
+            }
+
+            // File Grouping
+            const items = {};
+            Object.keys(currentZipFiles).forEach(fileName => {
+                if (fileName.startsWith(path)) {
+                    const relativeName = fileName.substring(path.length);
+                    if (relativeName.length === 0) return;
+                    const parts = relativeName.split('/');
+                    const primaryName = parts[0];
+
+                    if (parts.length > 1 || (parts.length === 1 && fileName.endsWith('/'))) {
+                        if(!items[primaryName]) items[primaryName] = { type: 'folder', name: primaryName, fullPath: path + primaryName + '/' };
+                    } else {
+                        if(!items[primaryName]) items[primaryName] = { type: 'file', name: primaryName, fullPath: fileName, size: currentZipFiles[fileName]._data.uncompressedSize };
+                    }
+                }
+            });
+
+            // Back Button
+            if (path !== '') {
+                let parentPath = path.substring(0, path.lastIndexOf('/', path.length - 2) + 1);
+                list.innerHTML += `<div class="file-item" onclick="displayFiles('${parentPath}')"><span class="file-name" style="color: var(--c-blue);"><i class="fas fa-arrow-up"></i> .. (Go Back)</span></div>`;
+            }
+
+            const sortedKeys = Object.keys(items).sort((a, b) => {
+                if (items[a].type === items[b].type) return a.localeCompare(b);
+                return items[a].type === 'folder' ? -1 : 1;
+            });
+
+            if(sortedKeys.length === 0) list.innerHTML += `<div style="padding:20px; text-align:center; color:var(--text-muted);">Empty Directory</div>`;
+
+            sortedKeys.forEach(key => {
+                const item = items[key];
+                let icon = item.type === 'folder' ? 'fas fa-folder' : 'fas fa-file';
+                let color = item.type === 'folder' ? 'var(--c-yellow)' : 'var(--text-muted)';
+                let clickAction = '';
+
+                if(item.type === 'folder') {
+                    clickAction = `displayFiles('${item.fullPath}')`;
+                } else {
+                    const lowName = item.name.toLowerCase();
+                    const isZip = zipFileExtensions.some(ext => lowName.endsWith(ext));
+                    const isImg = imageExtensions.some(ext => lowName.endsWith(ext));
+                    const isVid = videoExtensions.some(ext => lowName.endsWith(ext));
+                    
+                    if(isZip) {
+                        icon = 'fas fa-file-archive'; color = 'var(--c-purple)';
+                        clickAction = `openNestedZip('${item.fullPath}')`;
+                    } else if(isImg) {
+                        icon = 'fas fa-file-image'; color = 'var(--c-green)';
+                        clickAction = `openMediaViewer('${item.fullPath}')`;
+                    } else if(isVid) {
+                        icon = 'fas fa-file-video'; color = '#f472b6';
+                        clickAction = `openMediaViewer('${item.fullPath}')`;
+                    } else {
+                        // Editor or Hex
+                        if(lowName.endsWith('.xml') || lowName.endsWith('.html') || lowName.endsWith('.js') || lowName.endsWith('.txt')) {
+                             icon = 'fas fa-file-code'; color = 'var(--c-blue)';
+                        } else {
+                             icon = 'fas fa-microchip'; color = 'var(--text-muted)';
+                        }
+                        clickAction = `openApkEditor('${item.fullPath}')`;
+                    }
+                }
+
+                list.innerHTML += `<div class="file-item" onclick="${clickAction}"><span class="file-name"><i class="${icon}" style="color:${color}; margin-right:10px;"></i> ${item.name}</span><span class="file-size">${item.type === 'folder' ? 'DIR' : formatBytes(item.size)}</span></div>`;
+            });
+        }
+
+        async function openNestedZip(path) {
+            showLoading(true);
+            try {
+                const file = zip.files[path];
+                const content = await file.async('arraybuffer');
+                const newZip = await JSZip.loadAsync(content);
+                
+                zipHistory.push({ zip: zip, files: currentZipFiles, path: currentPath });
+                zip = newZip;
+                currentZipFiles = zip.files;
+                currentPath = '';
+                displayFiles('');
+            } catch(e) {
+                showToast("Cannot open nested archive", true);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function goBackZip() {
+            if(zipHistory.length === 0) return;
+            const prev = zipHistory.pop();
+            zip = prev.zip;
+            currentZipFiles = prev.files;
+            currentPath = prev.path;
+            displayFiles(currentPath);
+        }
+
+        async function openMediaViewer(path) {
+            showLoading(true);
+            try {
+                const file = zip.file(path);
+                const blob = await file.async('blob');
+                const url = URL.createObjectURL(blob);
+                const ext = path.split('.').pop().toLowerCase();
+                
+                let html = '';
+                if(videoExtensions.some(e => path.endsWith(e))) {
+                     html = `<video controls autoplay style="max-width:100%; max-height:400px;"><source src="${url}">Unsupported Video</video>`;
+                } else {
+                     html = `<img src="${url}" style="max-width:100%; max-height:400px; object-fit:contain;">`;
+                }
+                
+                showGenericModal(path.split('/').pop(), html);
+            } catch(e) {
+                showToast("Error loading media", true);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function openApkEditor(path) {
+            currentEditingFile = path;
+            const scr = document.getElementById('apkEditorScreen');
+            const txt = document.getElementById('apkEditorContent');
+            const imgContainer = document.getElementById('apkImageViewer');
+            const saveBtn = document.getElementById('saveApkBtn');
+            
+            document.getElementById('apkEditorFileName').textContent = path.split('/').pop();
+            imgContainer.style.display = 'none';
+            txt.style.display = 'block';
+            saveBtn.style.display = 'block';
+            scr.style.display = 'flex';
+            txt.readOnly = false;
+            txt.value = "Reading file...";
+            
+            showLoading(true);
+
+            try {
+                const file = zip.file(path);
+                const data = await file.async('uint8array');
+                let textContent = "";
+                let isBinary = false;
+
+                if (path.endsWith('AndroidManifest.xml')) {
+                    textContent = decodeBinaryXml(data);
+                    txt.readOnly = true; // Decoded view only
+                    showToast("Binary XML: Read-Only Mode");
+                    saveBtn.style.display = 'none';
+                } else if (isTextFile(path, data)) {
+                    textContent = new TextDecoder().decode(data);
+                } else {
+                    textContent = toHex(data.slice(0, 4096)); // Show first 4KB
+                    txt.readOnly = true;
+                    showToast("Binary File: Hex View Only");
+                    saveBtn.style.display = 'none';
+                }
+                txt.value = textContent;
+            } catch(e) {
+                txt.value = "Error reading file: " + e.message;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function saveApkFile() {
+            if(!currentEditingFile || document.getElementById('apkEditorContent').readOnly) return;
+            
+            const content = document.getElementById('apkEditorContent').value;
+            zip.file(currentEditingFile, content);
+            isSignatureValid = false;
+            updateSignatureStatusUI();
+            showToast("File Saved (Signature Invalidated)");
+            showSignatureWarning(); // Warn immediately
+        }
+
+        function closeApkEditor() { document.getElementById('apkEditorScreen').style.display = 'none'; }
+        
+        function downloadArchive() { 
+            if(!zip) return;
+            showLoading(true);
+            zip.generateAsync({type:"blob"}).then(content => {
+                showLoading(false);
+                const a = document.createElement("a"); a.href = URL.createObjectURL(content); a.download = "modified_app.apk"; a.click();
+            });
+        }
+
+        function showGenericModal(title, content) {
+            document.getElementById('genericModalTitle').textContent = title;
+            document.getElementById('genericModalContent').innerHTML = content;
+            document.getElementById('genericModal').style.display = 'flex';
+        }
+
+        // --- APK HELPERS (Decoders/Utils) ---
+        function formatBytes(bytes) { if (!bytes) return '0 B'; const k = 1024; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + ['B', 'KB', 'MB', 'GB'][i]; }
+
+        function isTextFile(fileName, data) {
+            const textExtensions = ['.txt', '.xml', '.json', '.java', '.kt', '.gradle', '.properties', '.html', '.css', '.js', '.yml', '.yaml', '.md', '.manifest', '.pro', '.cfg', '.sh', '.log'];
+            if (textExtensions.some(ext => fileName.toLowerCase().endsWith(ext))) return true;
+            if (data.length === 0) return true;
+            // Check for null bytes
+            for(let i=0; i<Math.min(data.length, 500); i++) if(data[i]===0) return false;
+            return true;
+        }
+
+        function toHex(data) {
+            let output = ''; const bytesPerRow = 16;
+            for (let i = 0; i < data.length; i += bytesPerRow) {
+                let hex = ''; let ascii = '';
+                output += i.toString(16).padStart(8, '0') + ': ';
+                for (let j = 0; j < bytesPerRow; j++) {
+                    const c = i + j;
+                    if (c < data.length) {
+                        const b = data[c];
+                        hex += b.toString(16).padStart(2, '0').toUpperCase() + ' ';
+                        ascii += (b >= 32 && b <= 126) ? String.fromCharCode(b) : '.';
+                    } else { hex += '   '; ascii += ' '; }
+                }
+                output += hex + ' | ' + ascii + '\n';
+            }
+            return output;
+        }
+
+        // ANDROID BINARY XML DECODER (Simplified)
+        function decodeBinaryXml(data) {
+            let pos = 0;
+            const view = new DataView(data.buffer);
+            const strings = [];
+            
+            try {
+                if (view.getUint32(pos, true) !== 0x00080003) return 'Invalid AXML header';
+                pos += 8;
+                const stringCount = view.getUint32(pos, true); pos += 20; // Skip offsets
+                const stringStart = view.getUint32(pos - 8, true); // Relies on logic
+                
+                // Brute force skip to string pool (approximate for lightweight view)
+                // A complete AXML parser is very large. This attempts to extract readable strings.
+                // For a proper editor, a full library is needed.
+                return "Binary XML Decoding is complex. \nStrings found in this file:\n\n" + extractStrings(data).join('\n');
+            } catch(e) { return "Error decoding binary XML: " + e.message; }
+        }
+
+        function extractStrings(data) {
+            // Simple string extractor for binary files
+            let res = [];
+            let current = "";
+            for(let i=0; i<data.length; i++) {
+                const c = data[i];
+                if(c >= 32 && c <= 126) { current += String.fromCharCode(c); }
+                else {
+                    if(current.length > 4) res.push(current);
+                    current = "";
+                }
+            }
+            return res;
+        }
+
+        // ============================
+        // NOTES LOGIC
+        // ============================
+        let notes = []; let currentNoteId = null;
+        function loadNotes() { try { notes = JSON.parse(localStorage.getItem('notes')) || []; } catch { notes = []; } }
+        function saveNotes() { localStorage.setItem('notes', JSON.stringify(notes)); }
+        function renderNotes() {
+            const grid = document.getElementById('notesGrid'); const empty = document.getElementById('emptyState');
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            grid.innerHTML = '';
+            const filtered = notes.filter(n => n.title.toLowerCase().includes(query) || n.content.toLowerCase().includes(query));
+            if (filtered.length === 0) empty.style.display = 'block';
+            else {
+                empty.style.display = 'none';
+                filtered.forEach(note => {
+                    const el = document.createElement('div');
+                    el.className = `note-card note-color-${note.color}`;
+                    const cleanContent = note.content.substring(0, 150).replace(/</g, "&lt;");
+                    el.innerHTML = `<div class="note-card-title"><span>${note.title || 'Untitled'}</span>${note.locked ? '<i class="fas fa-lock"></i>' : ''}</div><div class="note-card-body">${note.locked ? '<i>Locked Content</i>' : cleanContent}</div><div class="note-card-footer">${new Date(note.updatedAt).toLocaleDateString()}</div>`;
+                    el.onclick = () => handleNoteClick(note);
+                    grid.appendChild(el);
+                });
+            }
+        }
+        function createNewNote() { const id = Date.now(); notes.unshift({ id, title: '', content: '', color: 'cyan', locked: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); saveNotes(); openEditor(id); }
+        function handleNoteClick(note) { if (note.locked) { currentNoteId = note.id; promptPattern('Unlock Note', () => openReader(note.id)); } else openReader(note.id); }
+        function openEditor(id) { currentNoteId = id; const note = notes.find(n => n.id === id); document.getElementById('editorTitle').value = note.title; document.getElementById('editorTextarea').value = note.content; updateLockIcon(note.locked, 'lockNoteBtn'); document.getElementById('editorScreen').style.display = 'flex'; }
+        function closeEditor() { const note = notes.find(n => n.id === currentNoteId); if (note) { note.title = document.getElementById('editorTitle').value; note.content = document.getElementById('editorTextarea').value; note.updatedAt = new Date().toISOString(); if (!note.title && !note.content) notes = notes.filter(n => n.id !== currentNoteId); saveNotes(); } document.getElementById('editorScreen').style.display = 'none'; renderNotes(); }
+        function openReader(id) { currentNoteId = id; const note = notes.find(n => n.id === id); document.getElementById('readerTitle').textContent = note.title || 'Untitled'; document.getElementById('readerDate').textContent = new Date(note.updatedAt).toLocaleDateString(); document.getElementById('readerText').textContent = note.content; updateLockIcon(note.locked, 'readerLockBtn'); document.getElementById('readerScreen').style.display = 'flex'; }
+        function closeReader() { document.getElementById('readerScreen').style.display = 'none'; }
+        document.getElementById('readerEditBtn').onclick = () => { document.getElementById('readerScreen').style.display = 'none'; openEditor(currentNoteId); };
+        document.getElementById('readerDeleteBtn').onclick = () => { if(confirm('Delete?')) { notes = notes.filter(n => n.id !== currentNoteId); saveNotes(); closeReader(); renderNotes(); } };
+        function updateLockIcon(locked, btnId) { const icon = document.getElementById(btnId).querySelector('i'); icon.className = locked ? 'fas fa-lock' : 'fas fa-lock-open'; }
+        document.getElementById('lockNoteBtn').onclick = () => toggleLock(); document.getElementById('readerLockBtn').onclick = () => toggleLock();
+        function toggleLock() { const note = notes.find(n => n.id === currentNoteId); if (!localStorage.getItem('appPin')) return showToast("Set a Security in Settings first", true); const action = note.locked ? 'Unlock' : 'Lock'; promptPattern(action, () => { note.locked = !note.locked; updateLockIcon(note.locked, 'lockNoteBtn'); updateLockIcon(note.locked, 'readerLockBtn'); saveNotes(); renderNotes(); }); }
+        document.getElementById('colorPickerBtn').onclick = () => document.getElementById('colorModal').style.display = 'flex';
+        function selectColor(color) { const note = notes.find(n => n.id === currentNoteId); if (note) { note.color = color; saveNotes(); } hideModal('colorModal'); }
+        document.getElementById('searchInput').addEventListener('input', renderNotes);
+        document.getElementById('exportBtn').onclick = () => { const note = notes.find(n => n.id === currentNoteId); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([`${note.title}\n\n${note.content}`], {type: 'text/plain'})); a.download = (note.title || 'note') + '.txt'; a.click(); };
+
+        // ============================
+        // SECURITY LOGIC (PIN & PATTERN)
+        // ============================
+        const canvas = document.getElementById('pattern-canvas'), ctx = canvas.getContext('2d'), dots = document.querySelectorAll('.pattern-dot');
+        let isDrawing = false, patternPath = [], dotCoords = [], patternFlowState = 'none', tempNewPattern = '', onPatternSuccess = null, lockoutTimerInterval = null;
+        let activeSecurityType = 'pattern'; let currentPinInput = '';
+
+        function initPatternGrid() { dotCoords = []; const rect = canvas.getBoundingClientRect(); dots.forEach(dot => { const r = dot.getBoundingClientRect(); dotCoords.push({ id: dot.getAttribute('data-id'), x: r.left - rect.left + r.width/2, y: r.top - rect.top + r.height/2, el: dot }); }); }
+        canvas.addEventListener('mousedown', startPath); canvas.addEventListener('mousemove', movePath); canvas.addEventListener('mouseup', endPath);
+        canvas.addEventListener('touchstart', e=>{e.preventDefault(); startPath(e.touches[0]);}, {passive:false}); canvas.addEventListener('touchmove', e=>{e.preventDefault(); movePath(e.touches[0]);}, {passive:false}); canvas.addEventListener('touchend', e=>{e.preventDefault(); endPath();});
+        function startPath(e) { if(checkLockout() || activeSecurityType !== 'pattern') return; isDrawing = true; patternPath = []; ctx.clearRect(0,0,canvas.width,canvas.height); dots.forEach(d=>d.classList.remove('active','error','success')); checkHit(e.clientX,e.clientY); }
+        function movePath(e) { if(!isDrawing) return; const rect=canvas.getBoundingClientRect(); drawPattern(e.clientX-rect.left,e.clientY-rect.top); checkHit(e.clientX,e.clientY); }
+        function checkHit(x,y) { const rect=canvas.getBoundingClientRect(); x-=rect.left; y-=rect.top; dotCoords.forEach(dot => { if(Math.hypot(dot.x-x,dot.y-y)<30 && !patternPath.includes(dot.id)) { patternPath.push(dot.id); dot.el.classList.add('active'); if(navigator.vibrate) navigator.vibrate(40); } }); }
+        function drawPattern(cx,cy) { ctx.clearRect(0,0,canvas.width,canvas.height); if(!patternPath.length) return; ctx.beginPath(); ctx.strokeStyle='#3b82f6'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.lineJoin='round'; const f=dotCoords.find(d=>d.id===patternPath[0]); ctx.moveTo(f.x,f.y); for(let i=1;i<patternPath.length;i++) { const d=dotCoords.find(dot=>dot.id===patternPath[i]); ctx.lineTo(d.x,d.y); } if(cx) ctx.lineTo(cx,cy); ctx.stroke(); }
+        function endPath() { if(!isDrawing) return; isDrawing=false; drawPattern(); if(patternPath.join('').length<3) { resetPattern('error'); return; } processSecurityInput(patternPath.join('')); }
+        
+        function handlePinInput(val) {
+            if(checkLockout()) return;
+            if(val === 'del') currentPinInput = currentPinInput.slice(0, -1);
+            else if(val === 'clr') currentPinInput = '';
+            else if(currentPinInput.length < 4) { currentPinInput += val; if(navigator.vibrate) navigator.vibrate(20); }
+            updatePinDisplay();
+            if(currentPinInput.length === 4) setTimeout(() => processSecurityInput(currentPinInput), 100);
+        }
+        function updatePinDisplay() {
+            const dots = document.querySelectorAll('.pin-dot-display');
+            dots.forEach((d, i) => { if(i < currentPinInput.length) d.classList.add('filled'); else d.classList.remove('filled'); });
+        }
+        function resetPattern(s) { 
+            if(activeSecurityType === 'pattern') { ctx.strokeStyle = s==='success'?'#22c55e':'#ef4444'; ctx.stroke(); dots.forEach(d=>{ if(d.classList.contains('active')) d.classList.add(s); }); if(s !== 'success') setTimeout(()=>{ctx.clearRect(0,0,canvas.width,canvas.height); dots.forEach(d=>d.className='pattern-dot');},600); } 
+            else { const pinDots = document.querySelectorAll('.pin-dot-display'); pinDots.forEach(d => { d.style.borderColor = s==='success' ? '#22c55e' : '#ef4444'; if(d.classList.contains('filled')) { d.style.background = s==='success' ? '#22c55e' : '#ef4444'; d.style.borderColor = s==='success' ? '#22c55e' : '#ef4444'; } }); if(s !== 'success') setTimeout(() => { pinDots.forEach(d => { d.style.borderColor = ''; d.style.background = ''; }); currentPinInput = ''; updatePinDisplay(); }, 600); }
+            if(s==='error'){ if(navigator.vibrate) navigator.vibrate([70,50,70]); (activeSecurityType === 'pattern' ? document.getElementById('pattern-container') : document.getElementById('pin-container')).classList.add('shake-anim'); setTimeout(()=>document.querySelector('.shake-anim').classList.remove('shake-anim'),400); }
+        }
+        function checkLockout() { const t = parseInt(localStorage.getItem('appLock_time')||0); if(t>Date.now()) { startLockoutCountdown(Math.ceil((t-Date.now())/1000)); return true; } else { if(localStorage.getItem('appLock_time')){localStorage.removeItem('appLock_time'); localStorage.setItem('appLock_failed',0); document.getElementById('lockoutScreen').classList.add('hidden');} return false; } }
+        function startLockoutCountdown(s) { document.getElementById('lockoutScreen').classList.remove('hidden'); document.getElementById('patternCancelBtn').style.display='none'; clearInterval(lockoutTimerInterval); let t=s; document.getElementById('lockoutTimer').textContent=t; lockoutTimerInterval=setInterval(()=>{t--; document.getElementById('lockoutTimer').textContent=t; if(t<=0){clearInterval(lockoutTimerInterval); document.getElementById('lockoutScreen').classList.add('hidden'); document.getElementById('patternCancelBtn').style.display='inline-block'; localStorage.removeItem('appLock_time'); localStorage.setItem('appLock_failed',0);}},1000); }
+        
+        function processSecurityInput(e) { 
+            const s = localStorage.getItem('appPin'); 
+            if(patternFlowState==='verify_access' || patternFlowState==='verify_old') { 
+                if(e===s) { resetPattern('success'); localStorage.setItem('appLock_failed',0); setTimeout(()=>{ const isVerifyOld = (patternFlowState === 'verify_old'); hideModal('patternModal'); if(isVerifyOld){ showSecurityChoice(false); } else if(onPatternSuccess) { onPatternSuccess(); } },300); } else { handleAuthFail(); } 
+            } else if(patternFlowState==='enter_new') { tempNewPattern=e; resetPattern('success'); setTimeout(()=>{ if(activeSecurityType === 'pattern') { ctx.clearRect(0,0,canvas.width,canvas.height); dots.forEach(d=>d.className='pattern-dot'); } else { document.querySelectorAll('.pin-dot-display').forEach(d => { d.style.borderColor = ''; d.style.background = ''; }); currentPinInput = ''; updatePinDisplay(); } patternFlowState='confirm_new'; document.getElementById('patternTitle').textContent = activeSecurityType === 'pattern' ? "Confirm Pattern" : "Confirm PIN"; }, 600); 
+            } else if(patternFlowState==='confirm_new') { if(e===tempNewPattern) { localStorage.setItem('appPin',e); localStorage.setItem('appLockType', activeSecurityType); resetPattern('success'); showToast("Security Set!"); setTimeout(()=>{ hideModal('patternModal'); updatePinMenuUI(); patternFlowState='none'; }, 500); } else { resetPattern('error'); showToast("Mismatch, try again",true); setTimeout(()=>{ patternFlowState='enter_new'; document.getElementById('patternTitle').textContent = activeSecurityType === 'pattern' ? "Draw New Pattern" : "Enter New PIN"; }, 600); } } 
+        }
+        function handleAuthFail() { resetPattern('error'); let f=parseInt(localStorage.getItem('appLock_failed')||0)+1; localStorage.setItem('appLock_failed',f); if(f>=5){ const ut=Date.now()+30000; localStorage.setItem('appLock_time',ut); startLockoutCountdown(30); } else showToast(`Wrong Code (${f}/5)`,true); }
+        function showSecurityChoice(isChange = false) { hideModal('patternModal'); if(isChange) { promptPattern("Verify Current", () => {}, true); } else { document.getElementById('securityChoiceModal').style.display = 'flex'; } }
+        function initSecuritySetup(type) { hideModal('securityChoiceModal'); activeSecurityType = type; patternFlowState = 'enter_new'; tempNewPattern = ''; configureModalForType(type); document.getElementById('patternTitle').textContent = type === 'pattern' ? "Draw New Pattern" : "Enter New PIN"; document.getElementById('patternSubTitle').textContent = type === 'pattern' ? "Connect at least 4 dots" : "Enter 4 digits"; document.getElementById('patternModal').style.display='flex'; checkLockout(); }
+        function promptPattern(t, cb, isChangeVerification = false) { 
+            const storedType = localStorage.getItem('appLockType') || 'pattern'; 
+            activeSecurityType = storedType; 
+            patternFlowState = isChangeVerification ? 'verify_old' : 'verify_access'; 
+            onPatternSuccess = cb; 
+            configureModalForType(activeSecurityType); 
+            document.getElementById('patternTitle').textContent = t; 
+            document.getElementById('patternSubTitle').textContent = activeSecurityType === 'pattern' ? "Draw Pattern" : "Enter PIN"; 
+            document.getElementById('patternModal').style.display='flex'; 
+            checkLockout();
+            
+            // Show Forgot Button only if recovery is set
+            const hasRecovery = localStorage.getItem('appRecoveryAns');
+            if(hasRecovery) document.getElementById('forgotBtn').classList.remove('hidden');
+            else document.getElementById('forgotBtn').classList.add('hidden');
+        }
+        
+        function configureModalForType(type) { currentPinInput = ''; document.querySelectorAll('.pin-dot-display').forEach(d => { d.classList.remove('filled'); d.style.borderColor = ''; d.style.background = ''; }); updatePinDisplay(); ctx.clearRect(0,0,canvas.width,canvas.height); dots.forEach(d=>d.className='pattern-dot'); if(type === 'pattern') { document.getElementById('pattern-container').classList.add('active-mode'); document.getElementById('pin-container').classList.remove('active-mode'); setTimeout(initPatternGrid, 100); } else { document.getElementById('pattern-container').classList.remove('active-mode'); document.getElementById('pin-container').classList.add('active-mode'); } }
+        function handleClearPinClick() { if(!localStorage.getItem('appPin')) return showToast("No Security Set",true); promptPattern('Enter to Clear', () => { localStorage.removeItem('appPin'); localStorage.removeItem('appLockType'); notes.forEach(n=>n.locked=false); saveNotes(); showToast("Security Cleared"); updatePinMenuUI(); }); }
+
+        // ============================
+        // RECOVERY SYSTEM
+        // ============================
+        function handleRecoveryClick() {
+            if(localStorage.getItem('appPin')) {
+                promptPattern("Verify Identity", () => { initRecovery(); });
+            } else { initRecovery(); }
+        }
+
+        function initRecovery() {
+            document.getElementById('recModalTitle').textContent = 'Recovery Setup';
+            document.getElementById('recSetupMode').classList.remove('hidden');
+            document.getElementById('recVerifyMode').classList.add('hidden');
+            const savedQ = localStorage.getItem('appRecoveryQuest');
+            const savedA = localStorage.getItem('appRecoveryAns');
+            if(savedQ) document.getElementById('recQuestionSelect').value = savedQ;
+            if(savedA) document.getElementById('recAnswerInput').value = savedA; 
+            else document.getElementById('recAnswerInput').value = '';
+            document.getElementById('recoveryModal').style.display = 'flex';
+        }
+
+        function saveRecovery() {
+            const q = document.getElementById('recQuestionSelect').value;
+            const a = document.getElementById('recAnswerInput').value.trim();
+            if(!a) return showToast("Please enter an answer", true);
+            localStorage.setItem('appRecoveryQuest', q);
+            localStorage.setItem('appRecoveryAns', a.toLowerCase()); 
+            hideModal('recoveryModal');
+            showToast("Recovery Set Successfully!");
+        }
+
+        function handleForgot() {
+            if(!localStorage.getItem('appRecoveryAns')) return; 
+            hideModal('patternModal');
+            const qCode = localStorage.getItem('appRecoveryQuest');
+            const questions = {
+                'pet': "What is your first pet's name?",
+                'school': "What school did you go to?",
+                'city': "What city were you born in?",
+                'mom': "What is your mother's maiden name?"
+            };
+            document.getElementById('recModalTitle').textContent = 'Reset Security';
+            document.getElementById('recSetupMode').classList.add('hidden');
+            document.getElementById('recVerifyMode').classList.remove('hidden');
+            document.getElementById('recVerifyQuestionText').textContent = questions[qCode] || "Answer your security question";
+            document.getElementById('recVerifyInput').value = '';
+            document.getElementById('recoveryModal').style.display = 'flex';
+        }
+
+        function verifyRecovery() {
+            const input = document.getElementById('recVerifyInput').value.trim().toLowerCase();
+            const stored = localStorage.getItem('appRecoveryAns');
+            if(input === stored) {
+                localStorage.removeItem('appPin');
+                localStorage.removeItem('appLockType');
+                localStorage.removeItem('appLock_failed');
+                localStorage.removeItem('appLock_time');
+                notes.forEach(n=>n.locked=false);
+                saveNotes();
+                hideModal('recoveryModal');
+                updatePinMenuUI();
+                showToast("Security Cleared. Please set a new PIN.", false);
+            } else {
+                showToast("Incorrect Answer", true);
+                document.getElementById('recVerifyInput').value = '';
+            }
+        }
+
+        // INIT
+        loadNotes(); renderNotes(); updatePinMenuUI(); window.addEventListener('resize', initPatternGrid);
+        
+        // Encrypt/Fetcher Handlers
+        function doEncrypt() { const val = document.getElementById('enc-input').value; if(!val) return showToast("Empty", true); document.getElementById('enc-output').value = `<script>document.write(unescape('${escape(val)}'))<\/script>`; showToast("Done"); }
+        function doDecrypt() { const val = document.getElementById('enc-input').value; if(!val) return showToast("Empty", true); try{ document.getElementById('enc-output').value = unescape(val.replace(/^[\s\S]*unescape\('/, '').replace(/'\)[\s\S]*$/, '')); showToast("Decoded"); }catch{showToast("Fail",true);} }
+        function copyEncOutput() { navigator.clipboard.writeText(document.getElementById('enc-output').value).then(()=>showToast("Copied")); }
+        function saveEncAsNote() { const c = document.getElementById('enc-output').value; if(!c) return; notes.unshift({id:Date.now(), title:'Encrypted Code', content:c, color:'purple', locked:false, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()}); saveNotes(); showToast("Saved"); }
+        async function fetchSource() { const u = document.getElementById('fetch-url').value; if(!u) return; const b = document.getElementById('fetch-btn'); b.innerText='...'; try{ const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u.startsWith('http')?u:'https://'+u)}`); if(!r.ok) throw new Error(); const t = await r.text(); const c = document.getElementById('fetch-output'); c.textContent=html_beautify(t,{indent_size:4}); Prism.highlightElement(c); } catch{ document.getElementById('fetch-output').innerText="Fetch Error"; } finally{ b.innerText='GET'; } }
+        function copySource() { navigator.clipboard.writeText(document.getElementById('fetch-output').textContent).then(()=>showToast("Copied")); }
+        function saveFetchAsNote() { const c = document.getElementById('fetch-output').textContent; if(!c) return; notes.unshift({id:Date.now(), title:'Source: '+document.getElementById('fetch-url').value, content:c, color:'purple', locked:false, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()}); saveNotes(); showToast("Saved"); }
+    </script>
+</body>
+</html>

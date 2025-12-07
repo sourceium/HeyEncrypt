@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APK Viewer</title>
+    <!-- JSZip library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Ultra Modern Dark Palette */
+            --bg-body: #09090b;       /* Deepest Black/Grey */
+            --bg-sidebar: #121215;    /* Slightly lighter for contrast */
+            --bg-card: #18181b;       /* Card background */
+            --bg-hover: #27272a;      /* Hover state */
+            --bg-active: #3f3f46;     /* Active/Selected state */
+            
+            --accent-primary: #3b82f6; /* Vivid Blue */
+            --accent-glow: rgba(59, 130, 246, 0.3);
+            
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            
+            --border-color: #27272a;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            
+            --radius-lg: 12px;
+            --radius-md: 8px;
+            --radius-sm: 6px;
+            
+            --font-ui: 'Inter', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+        }
+
+        /* --- Reset & Base --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: var(--font-ui);
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+        /* --- Header --- */
+        header {
+            background: rgba(18, 18, 21, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 50;
+            flex-shrink: 0;
+        }
+
+        .header-left { display: flex; gap: 12px; align-items: center; }
+
+        .btn-top {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            height: 36px;
+        }
+        .btn-top:hover { background: var(--bg-hover); color: var(--text-main); border-color: #52525b; }
+        .btn-top:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Primary Upload Button Style in Header (Hidden until needed logic handles it, but styling here) */
+        #upload-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+        #upload-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+        /* Status Badges */
+        #signature-status-btn.valid { color: var(--success); background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); }
+        #signature-status-btn.invalid { color: var(--danger); background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); }
+
+        /* --- Main Layout --- */
+        .container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, #131316 0%, #09090b 100%);
+        }
+
+        main {
+            flex: 1;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* --- Start Screen (Big Button) --- */
+        #start-hint {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px; /* Ensure vertical center */
+            animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .mega-upload-btn {
+            position: relative;
+            background: linear-gradient(145deg, #18181b, #121215);
+            border: 1px solid var(--border-color);
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 0 0 var(--accent-glow);
+            color: var(--text-muted);
+            group: 'upload';
+        }
+
+        .mega-upload-btn:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-primary);
+            color: var(--text-main);
+            box-shadow: 0 0 40px -10px var(--accent-glow);
+        }
+
+        .mega-upload-btn i {
+            font-size: 3.5rem;
+            margin-bottom: 16px;
+            color: var(--accent-primary);
+            transition: transform 0.3s;
+        }
+        
+        .mega-upload-btn:hover i { transform: translateY(-8px); }
+
+        .mega-upload-btn span {
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .mega-upload-btn::before {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 2px dashed var(--border-color);
+            transition: all 0.4s;
+            animation: spin 20s linear infinite;
+        }
+        .mega-upload-btn:hover::before { border-color: var(--accent-primary); opacity: 0.5; animation-duration: 10s; }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* --- APK Info Card --- */
+        #apk-info {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s;
+        }
+        
+        #apk-icon {
+            width: 64px; height: 64px;
+            border-radius: 14px;
+            object-fit: cover;
+            background: var(--bg-sidebar);
+            border: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        
+        #apk-details { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+        #apk-details strong { font-size: 1.25rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #apk-details span { color: var(--text-muted); font-size: 0.85rem; display: flex; align-items: center; gap: 6px; }
+        #apk-details span::before { content: '•'; color: var(--bg-active); }
+        #apk-details span:first-of-type::before { display: none; }
+
+        /* --- File Browser --- */
+        #file-view-container { display: flex; flex-direction: column; gap: 12px; }
+        
+        #current-path {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--bg-sidebar);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-family: var(--font-code);
+        }
+        #current-path i { font-size: 0.75rem; color: var(--bg-active); }
+        #current-path span { cursor: pointer; transition: color 0.2s; }
+        #current-path span:hover { color: var(--accent-primary); text-decoration: underline; }
+        
+        #file-list { display: none; padding-bottom: 40px; }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border: 1px solid transparent;
+            border-bottom-color: var(--border-color);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .file-item:first-child { border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); }
+        .file-item:last-child { border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg); border-bottom-color: transparent; }
+        
+        .file-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-color);
+            transform: translateX(4px);
+            z-index: 2;
+        }
+        
+        .file-name {
+            flex: 1;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-name i { width: 20px; text-align: center; font-size: 1.1em; transition: transform 0.2s; }
+        .file-item:hover .file-name i { transform: scale(1.1); }
+
+        /* Icon Colors */
+        .fa-folder { color: var(--warning); }
+        .fa-file-code { color: var(--accent-primary); }
+        .fa-file-image { color: var(--success); }
+        .fa-file-video { color: #f472b6; }
+        .fa-file-archive { color: #a78bfa; }
+        .fa-microchip { color: #94a3b8; }
+        .fa-arrow-up { color: var(--text-muted); }
+
+        .file-size {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-family: var(--font-code);
+            background: var(--bg-sidebar);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* --- Fullscreen Editor --- */
+        #editor {
+            position: fixed; inset: 0;
+            background: var(--bg-body);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+        }
+        #editor-controls {
+            background: var(--bg-sidebar);
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        #editor-file-name {
+            font-family: var(--font-code);
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        #editor-content {
+            flex: 1;
+            background: #0d0d0d;
+            color: #e4e4e7;
+            padding: 24px;
+            font-family: var(--font-code);
+            font-size: 14px;
+            line-height: 1.6;
+            border: none;
+            resize: none;
+        }
+        #editor-content:focus { box-shadow: inset 0 0 0 2px var(--border-color); }
+
+        /* --- Modals & Overlays --- */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            width: 90%; max-width: 500px;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px; padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-title { font-weight: 600; font-size: 1.1rem; }
+        .close-modal { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; }
+        .close-modal:hover { color: var(--text-main); }
+
+        #signature-modal-body { display: flex; gap: 16px; align-items: flex-start; }
+        #signature-modal-body i { font-size: 2rem; margin-top: 4px; }
+        #signature-modal-body p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-top: 4px; }
+        #signature-modal-body strong { color: var(--text-main); }
+
+        /* --- Toast & Loader --- */
+        #notification-toast {
+            position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px);
+            background: var(--bg-active);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            z-index: 300;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: none;
+        }
+        #notification-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        #loading-overlay {
+            position: fixed; inset: 0; background: rgba(9, 9, 11, 0.8);
+            backdrop-filter: blur(4px);
+            display: none; justify-content: center; align-items: center; z-index: 400;
+        }
+        #loading-overlay i { font-size: 2.5rem; color: var(--accent-primary); }
+
+        #error-message {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 12px;
+            border-radius: var(--radius-md);
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        /* --- Media Queries --- */
+        @media (max-width: 600px) {
+            header { padding: 0 16px; }
+            .btn-top span { display: none; }
+            #apk-info { flex-direction: column; text-align: center; }
+            #apk-details span { justify-content: center; }
+            .mega-upload-btn { width: 180px; height: 180px; }
+            .mega-upload-btn i { font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay"><div><i class="fas fa-spinner fa-spin"></i></div></div>
+    
+    <!-- Notification Toast -->
+    <div id="notification-toast"></div>
+
+    <!-- Generic Modal -->
+    <div id="app-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modal-title" class="modal-title">Info</span>
+                <button onclick="closeModal()" class="close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-left">
+            <button id="upload-btn" class="btn-top" onclick="document.getElementById('file-input').click()">
+                <i class="fas fa-folder-open"></i> <span>Open</span>
+            </button>
+            <button id="signature-status-btn" class="btn-top" onclick="showSignatureWarning()" disabled>
+                <i class="fas fa-shield-alt"></i> <span>Status</span>
+            </button>
+        </div>
+        <button id="download-zip-btn" class="btn-top" onclick="downloadArchive('zip')" style="display: none;">
+            <i class="fas fa-download"></i> <span>Save ZIP</span>
+        </button>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <main>
+            <!-- Hidden File Input -->
+            <input type="file" id="file-input" accept=".apk,.zip,.jar" style="display: none;" />
+            
+            <!-- Error Message Display -->
+            <div id="error-message" style="display: none;"></div>
+
+            <!-- APK Info Card (Hidden initially) -->
+            <div id="apk-info" style="display: none;">
+                <img id="apk-icon" src="" alt="Icon" onerror="this.style.display='none'">
+                <div id="apk-details">
+                    <strong id="apk-name">App Name</strong>
+                    <span id="apk-package">Package Name</span>
+                    <span id="apk-version">Version</span>
+                    <span id="apk-size">Size</span>
+                </div>
+            </div>
+
+            <!-- File Explorer (Hidden initially) -->
+            <div id="file-view-container">
+                <div id="current-path" style="display: none;"></div>
+                <div id="file-list"></div>
+            </div>
+
+            <!-- HOME SCREEN: BIG CENTERED BUTTON -->
+            <div id="start-hint">
+                <button class="mega-upload-btn" onclick="document.getElementById('file-input').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Upload APK</span>
+                </button>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Fullscreen Code Editor -->
+    <div id="editor">
+        <div id="editor-controls">
+            <button class="btn-top" onclick="closeEditor()"><i class="fas fa-arrow-left"></i> Back</button>
+            <span id="editor-file-name">filename.xml</span>
+            <button class="btn-top" onclick="saveFile()" style="background: var(--success); color: #fff; border-color: var(--success);"><i class="fas fa-save"></i> Save</button>
+        </div>
+        <textarea id="editor-content" spellcheck="false"></textarea>
+    </div>
+
+    <script>
+        // --- JAVASCRIPT LOGIC (100% UNCHANGED) ---
+        let zip = null;
+        let currentZipFiles = {};
+        let currentPath = '';
+        let currentEditingFile = null;
+        let currentApkSize = 0;
+        const zipFileExtensions = ['.zip', '.jar'];
+        const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico'];
+        const videoExtensions = ['.mp4', '.webm', '.ogg'];
+        let zipHistory = [];
+        let isSignatureValid = false; 
+
+        // Define constant paths for easy maintenance
+        const apkConfigPath = 'assets/app-config.json';
+        const apkIconPath = 'assets/app_icon.png';
+        
+        document.getElementById('file-input').addEventListener('change', handleFile);
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSignatureStatusUI();
+        });
+
+        // --- Notification and Error Control ---
+
+        function showNotification(message, duration = 3000) {
+            const toast = document.getElementById('notification-toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            
+            // Trigger animation
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10); 
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                // Hide after animation finishes
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 300); 
+            }, duration);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+        // --- Modal Control Functions ---
+        function showModal(title, contentHTML) {
+            const modalOverlay = document.getElementById('app-modal');
+            modalOverlay.querySelector('#modal-title').textContent = title;
+            modalOverlay.querySelector('#modal-body').innerHTML = contentHTML;
+            modalOverlay.style.display = 'flex';
+        }
+
+        function closeModal() {
+            const modalOverlay = document.getElementById('app-modal');
+            modalOverlay.style.display = 'none';
+            // Stop video playback if active
+            const videoElement = modalOverlay.querySelector('#modal-body video');
+            if (videoElement) {
+                videoElement.pause();
+                videoElement.src = '';
+            }
+        }
+        
+        // --- Signature Status Functions ---
+
+        function updateSignatureStatusUI() {
+            const btn = document.getElementById('signature-status-btn');
+            btn.disabled = false;
+            btn.classList.remove('valid', 'invalid');
+
+            if (!zip) {
+                btn.innerHTML = '<i class="fas fa-shield-alt"></i> <span>Status</span>';
+                btn.disabled = true;
+            } else if (isSignatureValid) {
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> <span>Valid</span>';
+                btn.classList.add('valid');
+            } else {
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>Invalid</span>';
+                btn.classList.add('invalid');
+            }
+        }
+        
+        function showSignatureWarning() {
+            const title = "Security Warning: Archive Signature Invalidated";
+            const icon = isSignatureValid ? 'fa-check-circle' : 'fa-exclamation-triangle';
+            const color = isSignatureValid ? '#28a745' : '#dc3545';
+            
+            let message;
+            if (isSignatureValid) {
+                message = `<p>The current archive signature is **VALID**. No modifications have been made since the last save.</p>`;
+            } else {
+                message = `<p><strong>This archive has been MODIFIED.</strong> Its cryptographic signature is now **INVALID**.</p>
+                           <p>Android/Java applications require a valid signature to be installed or run. You must use external tools (like **Apktool** or **Jarsigner**) to **re-sign** this archive before it can be used on a device.</p>`;
+            }
+
+            const content = `
+                <div id="signature-modal-body" style="display:flex; gap:15px; align-items:center;">
+                    <i class="fas ${icon}" style="font-size: 2.5rem; color: ${color};"></i>
+                    <div>
+                        <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;">${isSignatureValid ? 'Signature Valid' : 'Signature Invalidated'}</p>
+                        ${message}
+                    </div>
+                </div>
+            `;
+            showModal(title, content);
+        }
+
+        async function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file || !(file.name.endsWith('.apk') || zipFileExtensions.some(ext => file.name.toLowerCase().endsWith(ext)))) {
+                showError('Please select a valid .apk, .zip, or .jar file.');
+                return;
+            }
+            const uploadBtn = document.getElementById('upload-btn');
+            
+            // HIDE THE BIG BUTTON
+            document.getElementById('start-hint').style.display = 'none';
+
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            showLoading(true);
+            document.getElementById('file-list').style.display = 'none';
+
+            currentApkSize = file.size;
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const newZip = await JSZip.loadAsync(arrayBuffer);
+                
+                zipHistory = [];
+                zip = newZip;
+                currentZipFiles = zip.files;
+                currentPath = '';
+                
+                // Assume signature is valid on initial load
+                isSignatureValid = true; 
+                updateSignatureStatusUI();
+                
+                await displayApkInfo();
+                
+                await displayFiles(currentPath);
+                
+                document.getElementById('download-zip-btn').style.display = 'flex';
+                showNotification(`"${file.name}" loaded successfully.`);
+            } catch (err) {
+                showError('Error extracting file: ' + err.message);
+                document.getElementById('apk-info').style.display = 'none';
+                document.getElementById('start-hint').style.display = 'flex';
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="fas fa-upload"></i> <span>Open APK</span>';
+                showLoading(false);
+            }
+        }
+        
+        // --- APK INFO DISPLAY FUNCTION ---
+        async function displayApkInfo() {
+            const configEntry = zip.file(apkConfigPath);
+            const infoDiv = document.getElementById('apk-info');
+            
+            let appName = 'N/A';
+            let packageName = 'N/A';
+            let versionName = 'N/A';
+            let versionCode = 'N/A';
+
+            if (configEntry) {
+                try {
+                    const jsonText = await configEntry.async('text');
+                    const config = JSON.parse(jsonText);
+                    
+                    appName = config.appName || 'N/A';
+                    packageName = config.packageName || 'N/A';
+                    versionName = config.versionName || 'N/A';
+                    versionCode = config.versionCode || 'N/A';
+                } catch (e) {
+                    console.error("Failed to parse app-config.json:", e);
+                }
+            }
+
+            document.getElementById('apk-name').textContent = `App Name: ${appName}`;
+            document.getElementById('apk-package').textContent = `Package: ${packageName}`;
+            document.getElementById('apk-version').textContent = `Version: ${versionName} (${versionCode})`;
+            document.getElementById('apk-size').textContent = `Size: ${formatBytes(currentApkSize)}`;
+
+            const iconEntry = zip.file(apkIconPath);
+            const iconImg = document.getElementById('apk-icon');
+            
+            if (iconEntry) {
+                try {
+                    const iconBlob = await iconEntry.async('blob');
+                    iconImg.src = URL.createObjectURL(iconBlob);
+                    iconImg.style.display = 'block';
+                } catch(e) {
+                    iconImg.style.display = 'none';
+                    iconImg.src = '';
+                }
+            } else {
+                iconImg.style.display = 'none';
+                iconImg.src = '';
+            }
+
+            infoDiv.style.display = 'flex';
+        }
+
+        // --- File Type and Icon Helpers ---
+        function getFileIcon(fileName, isFolder) {
+            if (isFolder) return 'fas fa-folder';
+            const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+            
+            if (imageExtensions.includes(ext)) return 'fas fa-file-image';
+            if (videoExtensions.includes(ext)) return 'fas fa-file-video';
+            if (zipFileExtensions.includes(ext)) return 'fas fa-file-archive';
+            
+            const codeExtensions = ['.xml', '.json', '.java', '.kt', '.js', '.css', '.html', '.txt', '.md', '.properties', '.manifest', '.pro', '.cfg', '.sh', '.log'];
+            if (codeExtensions.includes(ext)) return 'fas fa-file-code';
+
+            // Hex/Binary for all others
+            return 'fas fa-microchip'; 
+        }
+
+        function isMediaFile(fileName) {
+            const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+            return imageExtensions.includes(ext) || videoExtensions.includes(ext);
+        }
+
+        // --- Navigation and Display ---
+
+        function updateBreadcrumb() {
+            const pathDiv = document.getElementById('current-path');
+            if (!zip) {
+                pathDiv.style.display = 'none';
+                return;
+            }
+
+            pathDiv.style.display = 'flex';
+            pathDiv.innerHTML = '';
+
+            if (zipHistory.length > 0) {
+                const backZipBtn = document.createElement('span');
+                backZipBtn.textContent = '<< Parent Archive';
+                backZipBtn.onclick = goBackToParentZip;
+                pathDiv.appendChild(backZipBtn);
+                
+                const separator = document.createElement('span');
+                separator.className = 'separator';
+                separator.textContent = ' / ';
+                pathDiv.appendChild(separator);
+            }
+            
+            const rootSpan = document.createElement('span');
+            rootSpan.innerHTML = '<i class="fas fa-home"></i> Root';
+            rootSpan.onclick = () => displayFiles('');
+            pathDiv.appendChild(rootSpan);
+
+            if (currentPath) {
+                let cumulativePath = '';
+                const parts = currentPath.split('/').filter(p => p);
+                parts.forEach((part, index) => {
+                    cumulativePath += part + '/';
+                    const separator = document.createElement('span');
+                    separator.className = 'separator';
+                    separator.innerHTML = '<i class="fas fa-chevron-right" style="font-size:0.8rem; margin:0 5px;"></i>';
+                    pathDiv.appendChild(separator);
+
+                    const partSpan = document.createElement('span');
+                    partSpan.textContent = part;
+                    if (index < parts.length - 1) {
+                         partSpan.onclick = (function(path) {
+                            return () => displayFiles(path);
+                        })(cumulativePath);
+                    }
+                    pathDiv.appendChild(partSpan);
+                });
+            }
+        }
+
+        async function goBackToParentZip() {
+            if (zipHistory.length === 0) return;
+
+            const lastState = zipHistory.pop();
+            zip = lastState.zip;
+            currentZipFiles = lastState.files;
+            currentPath = lastState.path;
+            
+            await displayFiles(currentPath);
+        }
+
+        async function displayFiles(path) {
+            if (path.length > 0 && !path.endsWith('/')) {
+                path += '/';
+            }
+            currentPath = path;
+            updateBreadcrumb();
+
+            const fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+            fileList.style.display = 'block';
+            document.getElementById('editor').style.display = 'none';
+            closeModal(); // Close any open modal
+
+            const filteredFiles = {};
+            for (const fileName in currentZipFiles) {
+                if (fileName.startsWith(currentPath)) {
+                    const relativeName = fileName.substring(currentPath.length);
+                    if (relativeName.length > 0) {
+                        filteredFiles[relativeName] = currentZipFiles[fileName];
+                    }
+                }
+            }
+
+            const items = {};
+            for (const relativeName in filteredFiles) {
+                const parts = relativeName.split('/');
+                const primaryName = parts[0];
+
+                if (parts.length > 1) {
+                    const folderName = primaryName;
+                    items[folderName] = { type: 'folder', name: folderName, fullPath: currentPath + folderName + '/', size: 0 };
+                } else if (parts.length === 1 && primaryName.length > 0) {
+                    const file = filteredFiles[relativeName];
+                    const size = file._data ? file._data.uncompressedSize : 0;
+                    items[primaryName] = { type: 'file', name: primaryName, fullPath: currentPath + primaryName, size: size };
+                }
+            }
+
+            const sortedNames = Object.keys(items).sort((a, b) => {
+                const aType = items[a].type === 'folder' ? 0 : 1;
+                const bType = items[b].type === 'folder' ? 0 : 1;
+                if (aType !== bType) {
+                    return aType - bType;
+                }
+                return a.localeCompare(b);
+            });
+
+            if (currentPath) {
+                const backItem = document.createElement('div');
+                backItem.className = 'file-item';
+                // backItem.style.background = '#f5f5f5';
+                const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/', currentPath.length - 2) + 1);
+                backItem.innerHTML = `
+                    <span class="file-name" onclick="displayFiles('${parentPath.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-arrow-up" style="color: #6c757d;"></i> .. Parent Directory
+                    </span>
+                    <span class="file-size"></span>
+                    <div class="file-actions"></div>
+                `;
+                fileList.appendChild(backItem);
+            }
+
+            sortedNames.forEach(name => {
+                const item = items[name];
+                const element = document.createElement('div');
+                element.className = 'file-item';
+                
+                const isZipFile = zipFileExtensions.some(ext => name.toLowerCase().endsWith(ext));
+                const isMedia = isMediaFile(name);
+                const iconClass = getFileIcon(name, item.type === 'folder');
+
+
+                if (item.type === 'folder') {
+                    element.innerHTML = `
+                        <span class="file-name" onclick="displayFiles('${item.fullPath.replace(/'/g, "\\'")}')">
+                            <i class="${iconClass}"></i> ${name}
+                        </span>
+                        <span class="file-size">Folder</span>
+                        <div class="file-actions"></div>
+                    `;
+                } else {
+                    let clickHandler;
+                    if (isZipFile) {
+                        clickHandler = `openNestedZip('${item.fullPath.replace(/'/g, "\\'")}')`;
+                    } else if (isMedia) {
+                        clickHandler = `openMediaViewer('${item.fullPath.replace(/'/g, "\\'")}')`;
+                    } else {
+                        clickHandler = `openEditor('${item.fullPath.replace(/'/g, "\\'")}')`;
+                    }
+
+                    element.innerHTML = `
+                        <span class="file-name" onclick="${clickHandler}">
+                            <i class="${iconClass}"></i> ${name}
+                        </span>
+                        <span class="file-size">${formatBytes(item.size)}</span>
+                        <div class="file-actions">
+                            <button class="btn" onclick="downloadFile('${item.fullPath.replace(/'/g, "\\'")}')" title="Download File"><i class="fas fa-download"></i></button>
+                        </div>
+                    `;
+                }
+                fileList.appendChild(element);
+            });
+        }
+
+        async function openNestedZip(fileName) {
+            const file = zip.files[fileName];
+            if (!file) {
+                showError('File not found in current archive.');
+                return;
+            }
+            showLoading(true);
+            try {
+                const arrayBuffer = await file.async('arraybuffer');
+                const newZip = await JSZip.loadAsync(arrayBuffer);
+                
+                zipHistory.push({zip: zip, path: currentPath, files: currentZipFiles});
+                
+                zip = newZip;
+                currentZipFiles = zip.files;
+                currentPath = '';
+                await displayFiles(currentPath);
+            } catch (err) {
+                showError('Error opening nested ZIP file: ' + err.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- Media Viewing Functions ---
+        async function openMediaViewer(fileName) {
+            showLoading(true);
+            try {
+                const file = zip.file(fileName);
+                if (!file) throw new Error("File not found.");
+
+                const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+                let mimeType = 'application/octet-stream';
+                
+                if (imageExtensions.includes(ext)) {
+                    mimeType = `image/${ext.replace('.', '')}`;
+                    if (ext === '.jpg') mimeType = 'image/jpeg';
+                } else if (videoExtensions.includes(ext)) {
+                    mimeType = `video/${ext.replace('.', '')}`;
+                } else {
+                    showError(`Unsupported media type for preview: ${ext}`);
+                    return;
+                }
+
+                const blob = await file.async('blob');
+                const url = URL.createObjectURL(blob);
+                
+                let contentHTML;
+                if (mimeType.startsWith('image/')) {
+                    contentHTML = `<img src="${url}" alt="${fileName}" style="max-height: 70vh; max-width: 100%;">`;
+                } else if (mimeType.startsWith('video/')) {
+                    contentHTML = `<video controls autoplay style="max-height: 70vh; max-width: 100%;"><source src="${url}" type="${mimeType}">Your browser does not support the video tag.</video>`;
+                } else {
+                    throw new Error("File type handler mismatch.");
+                }
+
+                showModal(`Preview: ${fileName.split('/').pop()}`, contentHTML);
+            } catch (err) {
+                showError('Error loading media file: ' + err.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- File Editing/Hex Viewing Functions ---
+        
+        function toHex(data) {
+            let output = '';
+            const bytesPerRow = 16;
+            const view = new DataView(data.buffer);
+
+            for (let i = 0; i < data.length; i += bytesPerRow) {
+                let hexChunk = '';
+                let asciiChunk = '';
+
+                // Add Offset
+                output += i.toString(16).padStart(8, '0') + ': ';
+
+                for (let j = 0; j < bytesPerRow; j++) {
+                    const current_i = i + j;
+
+                    if (current_i < data.length) {
+                        const byte = data[current_i];
+                        // Hex part
+                        hexChunk += byte.toString(16).padStart(2, '0').toUpperCase() + ' ';
+                        // ASCII part (replace non-printable chars with '.')
+                        asciiChunk += (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                    } else {
+                        // Padding for the last line
+                        hexChunk += '   ';
+                        asciiChunk += ' ';
+                    }
+                }
+                output += hexChunk + ' | ' + asciiChunk + '\n';
+            }
+            return output;
+        }
+
+        async function openEditor(fileName) {
+            currentEditingFile = fileName;
+            const editorDiv = document.getElementById('editor');
+            const contentArea = document.getElementById('editor-content');
+            
+            document.getElementById('editor-file-name').textContent = fileName.substring(fileName.lastIndexOf('/') + 1);
+            editorDiv.style.display = 'flex';
+            contentArea.value = '';
+            showLoading(true);
+            showError(''); // Clear error messages when opening editor
+
+            try {
+                const data = await zip.file(fileName).async('uint8array');
+                let text;
+                
+                if (fileName.endsWith('AndroidManifest.xml')) {
+                    text = decodeBinaryXml(data);
+                    contentArea.readOnly = true;
+                    showError('Binary XML files (like AndroidManifest.xml) are decoded for viewing only. Saving is disabled.');
+                } else if (isTextFile(fileName, data)) {
+                    text = new TextDecoder().decode(data);
+                    contentArea.readOnly = false;
+                } else {
+                    // New Hex Viewer for other binary files
+                    text = toHex(data.slice(0, 4096)); // Show first 4KB
+                    contentArea.readOnly = true;
+                    showError('This is a binary file. Showing first 4KB in Hex View. Saving is disabled.');
+                }
+                contentArea.value = text;
+            } catch (err) {
+                contentArea.value = 'Error loading file: ' + err.message;
+                contentArea.readOnly = true;
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function closeEditor() {
+            document.getElementById('editor').style.display = 'none';
+            currentEditingFile = null;
+            showError(''); // Clear editor errors when closing
+        }
+
+        function saveFile() {
+            const contentArea = document.getElementById('editor-content');
+            if (contentArea.readOnly) {
+                showError('Cannot save: file is binary or read-only.');
+                return;
+            }
+
+            const fileName = currentEditingFile;
+            if (!fileName) {
+                showError('No file selected for saving.');
+                return;
+            }
+
+            const newContent = contentArea.value;
+
+            try {
+                zip.file(fileName, newContent);
+                
+                // Invalidate signature on save
+                isSignatureValid = false;
+                updateSignatureStatusUI();
+                
+                // Show success toast
+                showNotification(`✅ File "${fileName.substring(fileName.lastIndexOf('/') + 1)}" saved successfully.`);
+                
+                // Show the critical warning modal
+                showSignatureWarning(); 
+
+            } catch (err) {
+                showError('Error saving file: ' + err.message);
+            }
+        }
+        
+        // --- Utility Functions ---
+
+        async function downloadFile(fileName) {
+            showLoading(true);
+            try {
+                const content = await zip.file(fileName).async('blob');
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName.split('/').pop();
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                showError('Error downloading file: ' + err.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function downloadArchive(type) {
+            if (!zip) {
+                showError("Please upload an APK/ZIP file first.");
+                return;
+            }
+            
+            const downloadBtn = document.getElementById('download-zip-btn');
+            const filename = 'modified-archive.zip';
+            
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            showLoading(true);
+            
+            try {
+                let zipBlob = await zip.generateAsync({type: 'blob'});
+
+                const url = URL.createObjectURL(zipBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                showNotification("ZIP archive downloaded.");
+
+            } catch (err) {
+                showError('Error generating archive: ' + err.message);
+            } finally {
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = '<i class="fas fa-file-archive"></i> <span>ZIP</span>';
+                showLoading(false);
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function isTextFile(fileName, data) {
+            const textExtensions = ['.txt', '.xml', '.json', '.java', '.kt', '.gradle', '.properties', '.html', '.css', '.js', '.yml', '.yaml', '.md', '.manifest', '.pro', '.cfg', '.sh', '.log'];
+            if (textExtensions.some(ext => fileName.toLowerCase().endsWith(ext))) return true;
+            if (data.length === 0) return true;
+            const sample = new TextDecoder().decode(data.slice(0, Math.min(data.length, 1024)));
+            const nonPrintable = sample.replace(/[\x09\x0A\x0D\x20-\x7E]/g, '').length;
+            return nonPrintable < sample.length * 0.15;
+        }
+
+        // Binary XML Decoder (remains the same)
+        function decodeBinaryXml(data) {
+            let pos = 0;
+            let result = '<?xml version="1.0" encoding="utf-8"?>\n';
+            const view = new DataView(data.buffer);
+            // ... (Binary XML decoding logic)
+            if (view.getUint32(pos, true) !== 0x00080003) { return 'Invalid AXML header'; }
+            pos += 8;
+            const stringCount = view.getUint32(pos, true); pos += 4;
+            pos += 4;
+            const flags = view.getUint32(pos, true); pos += 4;
+            const stringStart = view.getUint32(pos, true); pos += 4;
+            pos += 4;
+            const stringOffsets = [];
+            for (let i = 0; i < stringCount; i++) {
+                stringOffsets.push(view.getUint32(pos, true));
+                pos += 4;
+            }
+            const strings = [];
+            for (let i = 0; i < stringCount; i++) {
+                let strPos = stringStart + stringOffsets[i];
+                let strLen = view.getUint16(strPos, true);
+                strPos += 2;
+                let str = '';
+                for (let j = 0; j < strLen; j++) {
+                    str += String.fromCharCode(view.getUint16(strPos, true));
+                    strPos += 2;
+                }
+                strings.push(str);
+            }
+            let currentPos = stringStart + view.getUint32(stringStart - 4, true);
+            while (currentPos < data.length) {
+                const chunkType = view.getUint32(currentPos, true);
+                const chunkSize = view.getUint32(currentPos + 4, true);
+                if (chunkType === 0x00080180) { currentPos += chunkSize; } else { pos = currentPos; break; }
+            }
+            while (pos < data.length) {
+                const chunkType = view.getUint32(pos, true);
+                const chunkSize = view.getUint32(pos + 4, true);
+                if (chunkType === 0x00100100) {
+                    pos += 16;
+                    const nsIdx = view.getUint32(pos, true); pos += 4;
+                    const nameIdx = view.getUint32(pos, true); pos += 4;
+                    pos += 4;
+                    const attrCount = view.getUint16(pos, true); pos += 4;
+                    const name = strings[nameIdx];
+                    result += `<${name}`;
+                    for (let i = 0; i < attrCount; i++) {
+                        const attrNsIdx = view.getUint32(pos, true); pos += 4;
+                        const attrNameIdx = view.getUint32(pos, true); pos += 4;
+                        const attrValueIdx = view.getUint32(pos, true); pos += 4;
+                        const attrType = view.getUint32(pos, true) >> 24; pos += 4;
+                        const attrData = view.getUint32(pos, true); pos += 4;
+                        const attrName = strings[attrNameIdx];
+                        let attrValue;
+                        switch (attrType) {
+                            case 0x03: attrValue = strings[attrValueIdx]; break;
+                            case 0x10: attrValue = attrData; break;
+                            case 0x12: attrValue = `0x${attrData.toString(16)}`; break;
+                            case 0x08: attrValue = attrData !== 0 ? 'true' : 'false'; break;
+                            case 0x05:
+                                const units = ['px', 'dp', 'sp', 'pt', 'in', 'mm'];
+                                attrValue = `${(attrData & 0xFFFFFF) / 100} ${units[attrData >> 24 & 0xF]}`;
+                                break;
+                            case 0x01: attrValue = `@${attrData.toString(16)}`; break;
+                            case 0x02: attrValue = `?${attrData.toString(16)}`; break;
+                            default: attrValue = attrData.toString();
+                        }
+                        result += ` ${attrName}="${attrValue.replace(/"/g, '&quot;')}"`;
+                    }
+                    result += '>\n';
+                } else if (chunkType === 0x00100101) {
+                    pos += 16;
+                    const nsIdx = view.getUint32(pos, true); pos += 4;
+                    const nameIdx = view.getUint32(pos, true); pos += 4;
+                    const name = strings[nameIdx];
+                    result += `</${name}>\n`;
+                } else if (chunkType === 0x00100102 || chunkType === 0x00100103) { pos += chunkSize; }
+                else if (chunkType === 0x00100104) {
+                    pos += 16;
+                    const textIdx = view.getUint32(pos, true); pos += 4;
+                    pos += 8;
+                    result += strings[textIdx] + '\n';
+                } else { pos += chunkSize; }
+            }
+            return result || 'Unable to fully decode binary XML';
+        }
+    </script>
+</body>
+</html>
