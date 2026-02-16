@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HaiEncript</title>
 
-
-    <!-- Favicons -->
+        <!-- Favicons -->
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="shortcut icon" href="favicon.png" type="image/x-icon">
     
@@ -430,17 +429,31 @@
             <button class="fab" style="background: var(--c-cyan);" onclick="showAddPassModal()"><i class="fas fa-plus"></i></button>
         </div>
 
-        <!-- 4. ENCRYPTION -->
+        <!-- 4. ENCRYPTION (UPDATED WITH NEW FETCHERS/METHODS) -->
         <div id="view-encrypt" class="app-view" style="overflow-y: auto;">
             <div class="fetcher-container">
                 <div style="background: var(--bg-card); padding: 24px; border-radius: 16px; border: 1px solid var(--border);">
-                    <h3 style="margin-bottom: 16px; color: var(--c-red);"><i class="fas fa-user-secret"></i> HTML/JS Obfuscator</h3>
-                    <textarea id="enc-input" class="modern-input" style="height:120px; resize: none; margin-bottom: 16px;" placeholder="Code to encrypt..."></textarea>
+                    <h3 style="margin-bottom: 16px; color: var(--c-red);"><i class="fas fa-user-secret"></i> Advanced Obfuscator</h3>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <span style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; display: block;">Select Method:</span>
+                        <select id="enc-method" class="modern-input" style="padding: 8px 12px; font-size: 0.9rem;">
+                            <option value="basic">Legacy: Basic Escape</option>
+                            <option value="full">Legacy: Full Hex Escape</option>
+                            <option value="base64">Modern: Base64 Wrap</option>
+                            <option value="charcode">Modern: Char-Code Mapping</option>
+                        </select>
+                    </div>
+
+                    <textarea id="enc-input" class="modern-input" style="height:120px; resize: none; margin-bottom: 16px;" placeholder="Paste HTML/JS code here..."></textarea>
+                    
                     <div style="display: flex; gap: 12px; margin-bottom: 16px;">
                         <button onclick="doEncrypt()" class="btn-primary" style="flex:1;"><i class="fas fa-lock"></i> Obfuscate</button>
                         <button onclick="doDecrypt()" class="btn-primary btn-purple" style="flex:1;"><i class="fas fa-unlock"></i> De-obfuscate</button>
                     </div>
-                    <textarea id="enc-output" class="modern-input" style="height:120px; resize: none;" readonly placeholder="Result..."></textarea>
+                    
+                    <textarea id="enc-output" class="modern-input" style="height:120px; resize: none;" readonly placeholder="Result code..."></textarea>
+                    
                     <div style="display: flex; gap: 12px; margin-top: 10px;">
                         <button onclick="copyEncOutput()" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid var(--border); box-shadow: none;"><i class="far fa-copy" style="color: var(--c-blue);"></i> Copy</button>
                         <button onclick="saveEncAsNote()" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid var(--border); box-shadow: none;"><i class="fas fa-save" style="color: var(--c-green);"></i> Save Note</button>
@@ -1385,14 +1398,74 @@
         // INIT
         loadNotes(); renderNotes(); updatePinMenuUI(); window.addEventListener('resize', initPatternGrid);
         
-        // Encrypt/Fetcher Handlers
-        function doEncrypt() { const val = document.getElementById('enc-input').value; if(!val) return showToast("Empty", true); document.getElementById('enc-output').value = `<script>document.write(unescape('${escape(val)}'))<\/script>`; showToast("Done"); }
-        function doDecrypt() { const val = document.getElementById('enc-input').value; if(!val) return showToast("Empty", true); try{ document.getElementById('enc-output').value = unescape(val.replace(/^[\s\S]*unescape\('/, '').replace(/'\)[\s\S]*$/, '')); showToast("Decoded"); }catch{showToast("Fail",true);} }
-        function copyEncOutput() { navigator.clipboard.writeText(document.getElementById('enc-output').value).then(()=>showToast("Copied")); }
-        function saveEncAsNote() { const c = document.getElementById('enc-output').value; if(!c) return; notes.unshift({id:Date.now(), title:'Encrypted Code', content:c, color:'purple', locked:false, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()}); saveNotes(); showToast("Saved"); }
+        // ============================
+        // UPDATED ENCRYPTOR HANDLERS
+        // ============================
+        function doEncrypt() { 
+            const val = document.getElementById('enc-input').value; 
+            const method = document.getElementById('enc-method').value;
+            if(!val) return showToast("Input Area is empty", true); 
+
+            let result = "";
+            const quot = "'";
+
+            switch(method) {
+                case 'basic':
+                    result = '<script>document.write(unescape(' + quot + escape(val) + quot + '))<\/script>';
+                    break;
+                case 'full':
+                    let hex = "";
+                    for (let i = 0; i < val.length; i++) {
+                        let h = val.charCodeAt(i).toString(16).toUpperCase().padStart(2, '0');
+                        hex += "%" + h;
+                    }
+                    result = '<script>document.write(unescape(' + quot + hex + quot + '))<\/script>';
+                    break;
+                case 'base64':
+                    // Convert string to base64 safely
+                    const b64 = btoa(unescape(encodeURIComponent(val)));
+                    result = '<script>document.write(decodeURIComponent(escape(atob(' + quot + b64 + quot + '))))<\/script>';
+                    break;
+                case 'charcode':
+                    const codes = val.split('').map(char => char.charCodeAt(0)).join(',');
+                    result = '<script>document.write(String.fromCharCode(' + codes + '))<\/script>';
+                    break;
+            }
+
+            document.getElementById('enc-output').value = result; 
+            showToast("Obfuscated using " + method); 
+        }
+
+        function doDecrypt() { 
+            const val = document.getElementById('enc-input').value; 
+            if(!val) return showToast("Input is Empty", true); 
+            
+            try {
+                let decoded = "";
+                // Logic to extract content from the generated script tags
+                if (val.includes("unescape('")) {
+                    decoded = unescape(val.replace(/^[\s\S]*unescape\('/, '').replace(/'\)[\s\S]*$/, ''));
+                } else if (val.includes("atob('")) {
+                    decoded = decodeURIComponent(escape(atob(val.replace(/^[\s\S]*atob\('/, '').replace(/'\)[\s\S]*$/, ''))));
+                } else if (val.includes("String.fromCharCode(")) {
+                    const codes = val.match(/fromCharCode\(([\d,]+)\)/)[1].split(',').map(Number);
+                    decoded = String.fromCharCode(...codes);
+                } else {
+                    throw new Error("Unknown format");
+                }
+                document.getElementById('enc-output').value = decoded; 
+                showToast("Code De-obfuscated"); 
+            } catch(e) {
+                showToast("Decoding Failed: Invalid Format", true);
+            }
+        }
+
+        function copyEncOutput() { navigator.clipboard.writeText(document.getElementById('enc-output').value).then(()=>showToast("Copied to clipboard")); }
+        function saveEncAsNote() { const c = document.getElementById('enc-output').value; if(!c) return; notes.unshift({id:Date.now(), title:'Obfuscated Code', content:c, color:'purple', locked:false, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()}); saveNotes(); showToast("Saved to Notes"); }
+        
         async function fetchSource() { const u = document.getElementById('fetch-url').value; if(!u) return; const b = document.getElementById('fetch-btn'); b.innerText='...'; try{ const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u.startsWith('http')?u:'https://'+u)}`); if(!r.ok) throw new Error(); const t = await r.text(); const c = document.getElementById('fetch-output'); c.textContent=html_beautify(t,{indent_size:4}); Prism.highlightElement(c); } catch{ document.getElementById('fetch-output').innerText="Fetch Error"; } finally{ b.innerText='GET'; } }
-        function copySource() { navigator.clipboard.writeText(document.getElementById('fetch-output').textContent).then(()=>showToast("Copied")); }
-        function saveFetchAsNote() { const c = document.getElementById('fetch-output').textContent; if(!c) return; notes.unshift({id:Date.now(), title:'Source: '+document.getElementById('fetch-url').value, content:c, color:'purple', locked:false, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()}); saveNotes(); showToast("Saved"); }
+        function copySource() { navigator.clipboard.writeText(document.getElementById('fetch-output').textContent).then(()=>showToast("Copied to clipboard")); }
+        function saveFetchAsNote() { const c = document.getElementById('fetch-output').textContent; if(!c) return; notes.unshift({id:Date.now(), title:'Source: '+document.getElementById('fetch-url').value, content:c, color:'purple', locked:false, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()}); saveNotes(); showToast("Saved to Notes"); }
     </script>
 </body>
 </html>
