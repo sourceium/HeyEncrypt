@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,7 +80,6 @@
         #main-app, #lock-screen { position: relative; z-index: 1; }
 
         /* ===================== ICON STYLES (Fixed) ===================== */
-        /* Exact sizing prevents SVGs from stretching to fill flex containers */
         .nav-icon { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; }
         .nav-icon svg { width: 100%; height: 100%; fill: currentColor; display: block; }
         
@@ -201,6 +199,7 @@
             text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
         }
         .totp-code:hover { color: var(--primary); text-shadow: 0 0 20px rgba(123,47,255, 0.5); }
+        .pulse-code { animation: codePulse 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
 
         /* Timer Badge */
         .timer-badge { 
@@ -354,7 +353,7 @@
             .content-wrapper { padding: 24px 16px; }
             .search-wrapper input { padding: 12px 16px 12px 40px; }
             .totp-code { font-size: 2.2rem; letter-spacing: 3px; }
-            .sidebar-width { width: 280px; }
+            :root { --sidebar-width: 280px; }
         }
 
         @media (max-width: 480px) {
@@ -718,6 +717,8 @@
                 lockApp() {
                     app.state.masterKey = null;
                     app.state.accounts = [];
+                    app.state.isSettingPin = false;
+                    app.state.confirmingPin = false;
                     app.ui.stopTimer();
                     app.$('#main-app').style.display = 'none';
                     app.auth.showLockScreen("Enter PIN", "Unlock your secure vault");
@@ -821,7 +822,8 @@
                     app.ui.closeModal('settings-modal');
                     app.state.isSettingPin = true;
                     app.state.confirmingPin = false;
-                    app.auth.lockApp();
+                    app.ui.stopTimer();
+                    app.$('#main-app').style.display = 'none';
                     this.showLockScreen("Set New PIN", "Create a 4-digit PIN to encrypt your data");
                 },
                 unlockSuccess() {
@@ -830,7 +832,8 @@
                         app.$('#lock-screen').style.display = 'none';
                         app.$('#main-app').style.display = 'flex';
                         app.ui.renderAccounts();
-                        app._lastWindow = null; 
+                        app._lastWindow = null;
+                        app._lastEpoch = null;
                         app.ui.startTimer();
                         this.resetIdleTimer();
                     }, 400);
@@ -846,6 +849,7 @@
                     if (!hasData || !app.state.settings.pinSet) {
                         app.auth.setupPin();
                     } else {
+                        app.$('#main-app').style.display = 'none';
                         app.auth.showLockScreen("Enter PIN", "Unlock your secure vault");
                     }
                 },
@@ -886,6 +890,8 @@
                             }
                         } catch (err) {
                             app.ui.showToast("Invalid backup file format", "error");
+                        } finally {
+                            event.target.value = '';
                         }
                     };
                     reader.readAsText(file);
@@ -898,7 +904,7 @@
                     const id = app.$('#acc-id').value;
                     const service = app.$('#acc-service').value.trim();
                     const username = app.$('#acc-username').value.trim();
-                    let secret = app.$('#acc-secret').value.trim().replace(/\s+/g, '').toUpperCase();
+                    let secret = app.$('#acc-secret').value.trim().replace(/[\s-]+/g, '').replace(/=+$/, '').toUpperCase();
                     const category = app.$('#acc-category').value;
                     const color = app.$('#acc-color').value;
 
@@ -938,7 +944,7 @@
                     
                     app.ui.renderColorPicker(acc.color);
                     app.$('#modal-title').innerText = "Edit Account";
-                    app.ui.openModal('add-modal');
+                    app.ui.openModal('add-modal', true);
                 },
                 initDelete(id) {
                     app.$('#delete-acc-id').value = id;
@@ -1036,8 +1042,10 @@
                                     if(data.startsWith('otpauth://totp/')) {
                                         const url = new URL(data);
                                         const secret = url.searchParams.get('secret');
-                                        const issuer = url.searchParams.get('issuer') || decodeURIComponent(url.pathname.split('/').pop().split(':')[0] || '');
-                                        const account = decodeURIComponent(url.pathname.split(':').pop() || '');
+                                        const label = decodeURIComponent(url.pathname.replace(/^\/+totp\/+/i, ''));
+                                        const labelParts = label.split(':');
+                                        const issuer = url.searchParams.get('issuer') || (labelParts.length > 1 ? labelParts[0].trim() : '');
+                                        const account = labelParts.length > 1 ? labelParts.slice(1).join(':').trim() : labelParts[0].trim();
                                         
                                         if(secret) {
                                             app.$('#acc-secret').value = secret;
@@ -1082,8 +1090,8 @@
                     });
                     app.$('#acc-color').value = selectedColor;
                 },
-                openModal(id) {
-                    if(id === 'add-modal' && app.$('#modal-title').innerText !== "Edit Account") {
+                openModal(id, isEdit = false) {
+                    if(id === 'add-modal' && !isEdit) {
                         app.$('#account-form').reset();
                         app.$('#acc-id').value = '';
                         this.renderColorPicker();
@@ -1093,6 +1101,9 @@
                 },
                 closeModal(id) {
                     app.$(`#${id}`).classList.remove('visible');
+                    if (id === 'add-modal') {
+                        app.$('#modal-title').innerText = "Add Account";
+                    }
                 },
                 showToast(msg, type = 'info') {
                     const toast = document.createElement('div');
@@ -1202,6 +1213,7 @@
                         container.appendChild(card);
                     });
 
+                    this._lastEpoch = null;
                     this.updateCodes();
                 },
                 startTimer() {
@@ -1209,31 +1221,34 @@
                     
                     const tick = () => {
                         const epoch = Math.floor(Date.now() / 1000);
-                        const remaining = 30 - (epoch % 30);
-                        const currentWindow = Math.floor(epoch / 30);
-                        
-                        const progress = remaining / 30;
-                        const percentage = progress * 100;
-                        const isWarning = remaining <= 5;
+                        if (app._lastEpoch !== epoch) {
+                            app._lastEpoch = epoch;
+                            const remaining = 30 - (epoch % 30);
+                            const currentWindow = Math.floor(epoch / 30);
+                            
+                            const progress = remaining / 30;
+                            const percentage = progress * 100;
+                            const isWarning = remaining <= 5;
 
-                        app.$$('.progress-fill').forEach(bar => {
-                            bar.style.width = `${percentage}%`;
-                            if(isWarning) bar.classList.add('warning');
-                            else bar.classList.remove('warning');
-                        });
-                        
-                        app.$$('.timer-badge').forEach(badge => {
-                            if(isWarning) badge.classList.add('warning');
-                            else badge.classList.remove('warning');
-                        });
+                            app.$$('.progress-fill').forEach(bar => {
+                                bar.style.width = `${percentage}%`;
+                                if(isWarning) bar.classList.add('warning');
+                                else bar.classList.remove('warning');
+                            });
+                            
+                            app.$$('.timer-badge').forEach(badge => {
+                                if(isWarning) badge.classList.add('warning');
+                                else badge.classList.remove('warning');
+                            });
 
-                        app.$$('.timer-text').forEach(text => {
-                            text.innerText = `${remaining}s`;
-                        });
+                            app.$$('.timer-text').forEach(text => {
+                                text.innerText = `${remaining}s`;
+                            });
 
-                        if (app._lastWindow !== currentWindow) {
-                            app._lastWindow = currentWindow;
-                            this.updateCodes();
+                            if (app._lastWindow !== currentWindow) {
+                                app._lastWindow = currentWindow;
+                                this.updateCodes();
+                            }
                         }
 
                         app.state.timerInterval = requestAnimationFrame(tick);
@@ -1246,7 +1261,7 @@
                         if (el) {
                             const code = await app.crypto.generateTOTP(acc.secret);
                             let newText = "Error";
-                            if(code !== "ERROR") {
+                            if(code !== "ERROR" && code !== "Invalid") {
                                 newText = `${code.slice(0,3)} ${code.slice(3)}`;
                             }
                             
@@ -1269,27 +1284,9 @@
 
             pwa: {
                 init() {
-                    const manifest = {
-                        name: "Authenticator Pro", short_name: "AuthPro", description: "Offline 2FA",
-                        start_url: "./", display: "standalone", background_color: "#08080C", theme_color: "#7B2FFF",
-                        icons: [{
-                            src: "/2fa/heart-lock.png"
-                            sizes: "192x192", type: "image/png"
-                        }]
-                    };
-                    const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
-                    app.$('#pwa-manifest').href = URL.createObjectURL(manifestBlob);
-
+                    // Uses root /site.webmanifest linked in <head>
                     if ('serviceWorker' in navigator) {
-                        const swCode = `
-                            self.addEventListener('install', e => self.skipWaiting());
-                            self.addEventListener('activate', e => self.clients.claim());
-                            self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response('Offline Mode Active', { status: 200 }))));
-                        `;
-                        const swBlob = new Blob([swCode], {type: 'application/javascript'});
-                        try {
-                            navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(e=>{});
-                        } catch(e) {}
+                        navigator.serviceWorker.register('/sw.js').catch(() => {});
                     }
                 }
             }
