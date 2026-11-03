@@ -46,8 +46,8 @@
             ]
         },
         {
-            "name": "2FA Authentication",
-            "short_name": "2FA Auth",
+            "name": "Authentication Pro",
+            "short_name": "Auth Pro",
             "description": "Launch 2FA Authenticator",
             "url": "/2fa/index.html",
             "icons": [
