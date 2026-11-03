@@ -96,6 +96,10 @@ HeyEncrypt/
 ├── 2fa/
 │   └── index.html      # Standalone 2FA Authentication Module
 |   └── heart-lock.png  # App Icon / 2FA Authentication Logo
+├── tools/
+|   └── apkview.html    # tools - Apk Inspector
+|   └── encryption.html # tools - Encryption code
+|   └── notes.html      # tools - notes webapp
 ├── favicon.png         # App Icon / Vault Logo
 ├── site.webmanifest    # PWA Web App Manifest
 ├── LICENSE             # MIT License
