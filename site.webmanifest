@@ -52,7 +52,7 @@
             "url": "/2fa/index.html",
             "icons": [
                 {
-                    "src": "/favicon.png",
+                    "src": "/2fa/heart-lock.png",
                     "sizes": "192x192",
                     "type": "image/png"
                 }
