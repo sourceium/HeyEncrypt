@@ -95,6 +95,7 @@ HeyEncrypt/
 ├── index.html          # Main HeyEncrypt - Smart Pocket Vault WebApp
 ├── 2fa/
 │   └── index.html      # Standalone 2FA Authentication Module
+|   └── heart-lock.png  # App Icon / 2FA Authentication Logo
 ├── favicon.png         # App Icon / Vault Logo
 ├── site.webmanifest    # PWA Web App Manifest
 ├── LICENSE             # MIT License
