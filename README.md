@@ -92,18 +92,20 @@ Then visit `http://localhost:8080` in your browser.
 
 ```text
 HeyEncrypt/
-├── index.html          # Main HeyEncrypt - Smart Pocket Vault WebApp
+├── index.html           # Main HeyEncrypt - Smart Pocket Vault WebApp
 ├── 2fa/
-│   └── index.html      # Standalone 2FA Authentication Module
-|   └── heart-lock.png  # App Icon / 2FA Authentication Logo
+│   └── index.html       # Standalone 2FA Authentication Module
+|   └── site.webmanifest # PWA Web App Manifest
+|   └── heart-lock.png   # App Icon / 2FA Authentication Logo
 ├── tools/
-|   └── apkview.html    # tools - Apk Inspector
-|   └── encryption.html # tools - Encryption code
-|   └── notes.html      # tools - notes webapp
-├── favicon.png         # App Icon / Vault Logo
-├── site.webmanifest    # PWA Web App Manifest
-├── LICENSE             # MIT License
-└── README.md           # Project Documentation
+|   └── apkview.html     # tools - Apk Inspector
+|   └── encryption.html  # tools - Encryption code
+|   └── notes.html       # tools - notes webapp
+├── favicon.png          # App Icon / Vault Logo
+├── sw.js                # service worker
+├── site.webmanifest     # PWA Web App Manifest
+├── LICENSE              # MIT License
+└── README.md            # Project Documentation
 ```
 
 ---
